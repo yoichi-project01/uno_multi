@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>UNO Online</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- ① Top Screen -->
+<section id="screen-top" class="screen active">
+  <div class="top-logo">
+    <h1 class="uno-logo">UNO</h1>
+    <p class="subtitle">オンライン対戦</p>
+  </div>
+  <div class="top-form">
+    <div class="form-group">
+      <label>ニックネーム</label>
+      <input id="input-nickname" type="text" maxlength="16" placeholder="名前を入力..." autocomplete="off">
+    </div>
+    <button id="btn-create" class="btn btn-primary btn-large">部屋を作る</button>
+    <div class="divider"><span>または</span></div>
+    <div class="form-group">
+      <label>ルームコード</label>
+      <input id="input-room-code" type="text" maxlength="4" placeholder="4桁のコード" pattern="[0-9]*" inputmode="numeric" autocomplete="off">
+    </div>
+    <button id="btn-join" class="btn btn-secondary btn-large">参加する</button>
+  </div>
+  <div id="top-error" class="error-msg hidden"></div>
+</section>
+
+<!-- ② Waiting Room -->
+<section id="screen-waiting" class="screen">
+  <div class="waiting-header">
+    <button id="btn-leave-waiting" class="btn-icon" title="退室">←</button>
+    <h2>待機室</h2>
+  </div>
+  <div class="room-code-display">
+    <span class="room-code-label">ルームコード</span>
+    <span id="display-room-code" class="room-code-value">----</span>
+  </div>
+  <button id="btn-copy-url" class="btn btn-outline btn-small">🔗 URLをコピー</button>
+  <div id="waiting-players" class="waiting-players"></div>
+  <div class="waiting-footer">
+    <p class="waiting-hint">2〜4人でプレイできます</p>
+    <button id="btn-start" class="btn btn-primary btn-large hidden">ゲームを開始する</button>
+    <p id="waiting-for-host" class="hint-text">ホストがゲームを開始するのを待っています...</p>
+  </div>
+</section>
+
+<!-- ③ Game Main Screen -->
+<section id="screen-game" class="screen">
+  <!-- Opponents area (top) -->
+  <div id="opponents-area" class="opponents-area"></div>
+
+  <!-- Game center -->
+  <div class="game-center">
+    <div class="direction-badge" id="direction-badge">↻</div>
+    <div class="game-field">
+      <div class="deck-area" id="btn-draw-card" title="山札から引く">
+        <div class="card card--back" id="deck-card">
+          <div class="card-back-design"></div>
+        </div>
+        <span id="deck-count" class="card-count-badge">0</span>
+      </div>
+      <div class="discard-area">
+        <div id="top-card" class="card"></div>
+        <div id="color-indicator" class="color-indicator"></div>
+      </div>
+    </div>
+    <div class="timer-bar-wrapper">
+      <div id="timer-bar" class="timer-bar"></div>
+      <span id="timer-text" class="timer-text">15</span>
+    </div>
+    <div id="current-turn-label" class="turn-label"></div>
+  </div>
+
+  <!-- My hand (bottom) -->
+  <div class="my-area">
+    <div id="my-hand" class="my-hand"></div>
+    <div class="action-row">
+      <button id="btn-pass" class="btn btn-outline hidden">パス</button>
+      <button id="btn-emote" class="btn btn-icon-round">😊</button>
+    </div>
+  </div>
+
+  <!-- UNO Button -->
+  <button id="btn-uno" class="uno-btn hidden">UNO!</button>
+  <!-- Challenge UNO (shown when another player has 1 card and hasn't declared) -->
+  <button id="btn-challenge" class="challenge-btn hidden"></button>
+
+  <!-- Color picker overlay -->
+  <div id="color-picker" class="overlay hidden">
+    <div class="overlay-content">
+      <h3>色を選んでください</h3>
+      <div class="color-grid">
+        <button class="color-btn" data-color="red" style="background:#e53e3e">赤</button>
+        <button class="color-btn" data-color="blue" style="background:#3182ce">青</button>
+        <button class="color-btn" data-color="green" style="background:#38a169">緑</button>
+        <button class="color-btn" data-color="yellow" style="background:#d69e2e">黄</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Waiting for color overlay (shown to non-chooser) -->
+  <div id="waiting-color-overlay" class="overlay-light hidden">
+    <p id="waiting-color-text"></p>
+  </div>
+
+  <!-- Emote panel -->
+  <div id="emote-panel" class="emote-panel hidden">
+    <div class="emote-grid">
+      <button class="emote-btn" data-emote="laugh">😂<span>LOL</span></button>
+      <button class="emote-btn" data-emote="ugh">😤<span>Ugh!</span></button>
+      <button class="emote-btn" data-emote="nice">🎉<span>Nice!</span></button>
+      <button class="emote-btn" data-emote="shocked">😱<span>Whoa!</span></button>
+      <button class="emote-btn" data-emote="thinking">🤔<span>Hmm...</span></button>
+      <button class="emote-btn" data-emote="gg">👏<span>GG</span></button>
+    </div>
+  </div>
+
+  <!-- Floating emote display -->
+  <div id="emote-float" class="emote-float hidden"></div>
+
+  <!-- Notification toast -->
+  <div id="game-toast" class="game-toast hidden"></div>
+</section>
+
+<!-- ④ Round Result -->
+<section id="screen-round-result" class="screen">
+  <div class="result-content">
+    <div class="result-trophy">🏆</div>
+    <h2 id="round-winner-name" class="result-winner"></h2>
+    <p class="result-subtitle">ラウンド勝利！</p>
+    <div id="round-scores-table" class="scores-table"></div>
+    <div id="round-hands-table" class="hands-table"></div>
+    <div id="next-round-countdown" class="countdown-text"></div>
+  </div>
+</section>
+
+<!-- ⑥ Final Result -->
+<section id="screen-game-end" class="screen">
+  <div class="result-content">
+    <div class="result-trophy">🥇</div>
+    <h2 id="game-winner-name" class="result-winner"></h2>
+    <p class="result-subtitle">ゲーム優勝！</p>
+    <div id="final-scores-table" class="scores-table"></div>
+    <button id="btn-back-to-lobby" class="btn btn-primary btn-large">待機室に戻る</button>
+  </div>
+</section>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
