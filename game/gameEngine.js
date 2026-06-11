@@ -7,9 +7,10 @@ function mod(n, m) {
 function canPlay(card, topCard, currentColor) {
   if (card.color === 'wild') return true;
   if (card.color === currentColor) return true;
-  if (card.type === topCard.type) return true;
-  if (card.type === 'number' && topCard.type === 'number' && card.value === topCard.value) return true;
-  return false;
+  if (card.type === 'number') {
+    return topCard.type === 'number' && card.value === topCard.value;
+  }
+  return card.type === topCard.type; // skip / reverse / draw2 は同種なら出せる
 }
 
 function getPlayableUids(hand, topCard, currentColor) {
