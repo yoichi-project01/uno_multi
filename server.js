@@ -4,6 +4,7 @@ const express = require('express');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const { createDeck, shuffle, calculateHandPoints } = require('./game/cardDeck');
 const { mod, canPlay, getPlayableUids, resolveCardEffect } = require('./game/gameEngine');
@@ -20,6 +21,12 @@ const BOT_NAMES = ['Bot Alice', 'Bot Bob', 'Bot Carol'];
 const rooms = new Map();
 // Map<socketId, { roomCode, playerId }>
 const socketMeta = new Map();
+// Map<email, { nickname, passwordHash, playerId }>
+const users = new Map();
+
+function hashPassword(pw) {
+  return crypto.createHash('sha256').update('uno-salt:' + pw).digest('hex');
+}
 
 // ── Express ───────────────────────────────────────────────────────────────────
 
@@ -423,6 +430,34 @@ io.on('connection', (socket) => {
 
     socket.emit('roomJoined', { roomCode, playerId, isHost: false });
     io.to(roomCode).emit('roomUpdate', { players: playerList(room) });
+  });
+
+  // ── register ──
+  socket.on('register', ({ email, nickname, password } = {}) => {
+    if (!email || !nickname || !password)
+      return socket.emit('authError', { message: '全ての項目を入力してください' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      return socket.emit('authError', { message: 'メールアドレスの形式が正しくありません' });
+    if (nickname.length < 1 || nickname.length > 16)
+      return socket.emit('authError', { message: 'ニックネームは1〜16文字で入力してください' });
+    if (password.length < 4)
+      return socket.emit('authError', { message: 'パスワードは4文字以上で入力してください' });
+    if (users.has(email))
+      return socket.emit('authError', { message: 'このメールアドレスは既に登録されています' });
+
+    const playerId = uuidv4();
+    users.set(email, { nickname, passwordHash: hashPassword(password), playerId });
+    socket.emit('authSuccess', { playerId, nickname });
+  });
+
+  // ── login ──
+  socket.on('login', ({ email, password } = {}) => {
+    if (!email || !password)
+      return socket.emit('authError', { message: 'メールアドレスとパスワードを入力してください' });
+    const user = users.get(email);
+    if (!user || user.passwordHash !== hashPassword(password))
+      return socket.emit('authError', { message: 'メールアドレスまたはパスワードが正しくありません' });
+    socket.emit('authSuccess', { playerId: user.playerId, nickname: user.nickname });
   });
 
   // ── startGame ──

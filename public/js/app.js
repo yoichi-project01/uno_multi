@@ -28,13 +28,24 @@ let imageCache = {};
 let pendingLandingEffect = false; // 相手カード着地アニメーション用フラグ
 
 // ── DOM Refs ──────────────────────────────────────────────────────────────────
-const screens = { top: $('screen-top'), waiting: $('screen-waiting'), game: $('screen-game'), roundResult: $('screen-round-result'), gameEnd: $('screen-game-end') };
+const screens = { top: $('screen-top'), login: $('screen-login'), waiting: $('screen-waiting'), game: $('screen-game'), roundResult: $('screen-round-result'), gameEnd: $('screen-game-end') };
 const els = {
   guestSheet: $('guest-sheet'),
   btnGuestLink: $('btn-guest-link'),
   btnLoginLink: $('btn-login-link'),
   btnSheetClose: $('btn-sheet-close'),
   sheetBackdrop: document.querySelector('.guest-sheet-backdrop'),
+  // Login screen
+  btnLoginBack: $('btn-login-back'),
+  formLogin: $('form-login'),
+  formRegister: $('form-register'),
+  loginEmail: $('login-email'),
+  loginPassword: $('login-password'),
+  loginError: $('login-error'),
+  regNickname: $('reg-nickname'),
+  regEmail: $('reg-email'),
+  regPassword: $('reg-password'),
+  registerError: $('register-error'),
   nickname: $('input-nickname'),
   roomCode: $('input-room-code'),
   btnCreate: $('btn-create'),
@@ -82,8 +93,31 @@ function $(id) { return document.getElementById(id); }
 function showScreen(name) {
   Object.values(screens).forEach(s => s.classList.remove('active'));
   if (screens[name]) screens[name].classList.add('active');
-  // トップに戻ったときはシートを閉じる
   if (name === 'top' && els.guestSheet) els.guestSheet.classList.add('hidden');
+}
+
+// ログイン後にゲストシートを開く（ニックネーム欄にアカウント名を表示）
+let loggedInNickname = null;
+
+function openSheetAfterAuth(nickname) {
+  loggedInNickname = nickname;
+  myNickname = nickname;
+  // ニックネーム欄を更新して固定
+  els.nickname.value = nickname;
+  els.nickname.readOnly = true;
+  // バナー挿入
+  const existing = document.querySelector('.auth-user-banner');
+  if (existing) existing.remove();
+  const banner = document.createElement('div');
+  banner.className = 'auth-user-banner';
+  banner.innerHTML = `
+    <div class="auth-user-avatar">${escHtml(nickname[0].toUpperCase())}</div>
+    <div class="auth-user-info">
+      <div class="auth-user-name">${escHtml(nickname)}</div>
+      <div class="auth-user-label">ログイン済み</div>
+    </div>`;
+  els.guestSheet.querySelector('.guest-sheet-inner').prepend(banner);
+  openGuestSheet();
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -118,6 +152,24 @@ function setupSocket() {
   });
 
   socket.on('error', ({ message }) => showError(message));
+
+  socket.on('authSuccess', ({ playerId, nickname }) => {
+    saveSession(null, playerId, nickname);
+    myPlayerId = playerId;
+    showScreen('top');
+    openSheetAfterAuth(nickname);
+  });
+
+  socket.on('authError', ({ message }) => {
+    // アクティブなフォームのエラー欄に表示
+    const loginVisible = !els.formLogin.classList.contains('hidden');
+    const errEl = loginVisible ? els.loginError : els.registerError;
+    errEl.textContent = message;
+    errEl.classList.remove('hidden');
+    // submitボタンを再有効化
+    const btn = (loginVisible ? els.formLogin : els.formRegister).querySelector('.auth-submit-btn');
+    if (btn) { btn.disabled = false; btn.textContent = loginVisible ? 'ログイン' : 'アカウント作成'; }
+  });
 
   socket.on('roomCreated', ({ roomCode, playerId, players }) => {
     saveSession(roomCode, playerId, myNickname);
@@ -332,10 +384,65 @@ function closeGuestSheet() {
 
 // ── Event Bindings ────────────────────────────────────────────────────────────
 function bindEvents() {
-  els.btnGuestLink.addEventListener('click', openGuestSheet);
+  els.btnGuestLink.addEventListener('click', () => {
+    // ゲストとして開く場合はニックネーム欄を編集可能に戻す
+    els.nickname.readOnly = false;
+    const banner = document.querySelector('.auth-user-banner');
+    if (banner) banner.remove();
+    openGuestSheet();
+  });
   els.btnSheetClose.addEventListener('click', closeGuestSheet);
   els.sheetBackdrop.addEventListener('click', closeGuestSheet);
-  els.btnLoginLink.addEventListener('click', () => showToast('ログイン機能は準備中です', 2000));
+  els.btnLoginLink.addEventListener('click', () => showScreen('login'));
+  els.btnLoginBack.addEventListener('click', () => showScreen('top'));
+
+  // ── Login / Register tabs ──
+  document.querySelectorAll('.login-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const isLogin = tab.dataset.tab === 'login';
+      els.formLogin.classList.toggle('hidden', !isLogin);
+      els.formRegister.classList.toggle('hidden', isLogin);
+      els.loginError.classList.add('hidden');
+      els.registerError.classList.add('hidden');
+    });
+  });
+
+  // ── Password visibility toggle ──
+  document.querySelectorAll('.btn-toggle-pw').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = $(btn.dataset.target);
+      if (!input) return;
+      input.type = input.type === 'password' ? 'text' : 'password';
+      btn.textContent = input.type === 'password' ? '👁' : '🙈';
+    });
+  });
+
+  // ── Login form submit ──
+  els.formLogin.addEventListener('submit', e => {
+    e.preventDefault();
+    const email = els.loginEmail.value.trim();
+    const password = els.loginPassword.value;
+    els.loginError.classList.add('hidden');
+    const btn = els.formLogin.querySelector('.auth-submit-btn');
+    btn.disabled = true;
+    btn.textContent = '確認中...';
+    socket.emit('login', { email, password });
+  });
+
+  // ── Register form submit ──
+  els.formRegister.addEventListener('submit', e => {
+    e.preventDefault();
+    const nickname = els.regNickname.value.trim();
+    const email = els.regEmail.value.trim();
+    const password = els.regPassword.value;
+    els.registerError.classList.add('hidden');
+    const btn = els.formRegister.querySelector('.auth-submit-btn');
+    btn.disabled = true;
+    btn.textContent = '作成中...';
+    socket.emit('register', { email, nickname, password });
+  });
 
   els.btnCreate.addEventListener('click', () => {
     const nick = els.nickname.value.trim();
@@ -822,8 +929,8 @@ function saveSession(roomCode, playerId, nickname) {
   myRoomCode = roomCode;
   myPlayerId = playerId;
   if (nickname) myNickname = nickname;
-  localStorage.setItem('uno_roomCode', roomCode);
-  localStorage.setItem('uno_playerId', playerId);
+  if (roomCode) localStorage.setItem('uno_roomCode', roomCode);
+  if (playerId) localStorage.setItem('uno_playerId', playerId);
   if (nickname) localStorage.setItem('uno_nickname', nickname);
 }
 
