@@ -7,8 +7,12 @@ if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL が設定されていません。.env ファイルを確認してください。');
 }
 
+// Neon は pooler 接続文字列に channel_binding=require が付くことがある
+// pg ドライバーが未対応のパラメータを除去して接続
+const connectionString = process.env.DATABASE_URL.replace('channel_binding=require&', '').replace('&channel_binding=require', '');
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString,
   ssl: { rejectUnauthorized: false },
   max: 5,
   idleTimeoutMillis: 30000,
