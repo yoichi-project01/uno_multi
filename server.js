@@ -14,7 +14,7 @@ const io = new Server(httpServer);
 
 const PORT = process.env.PORT || 3000;
 const TURN_SECONDS = 15;
-const TEST_ROOM_CODE = '1111'; // ソロテスト用: ボットが自動参加するルームコード
+const BOT_NAMES = ['Bot Alice', 'Bot Bob', 'Bot Carol'];
 
 // Map<roomCode, roomState>
 const rooms = new Map();
@@ -433,21 +433,18 @@ io.on('connection', (socket) => {
     if (room.hostPlayerId !== meta.playerId) return socket.emit('error', { message: 'ホストのみ開始できます' });
     if (room.status !== 'waiting') return;
 
-    // テストルーム: 1人でも開始できるようボットを補充
-    if (room.code === TEST_ROOM_CODE && room.players.length < 2) {
-      const botNames = ['Bot Alice', 'Bot Bob'];
+    // 人数が足りない場合はボットで補充（最低2人）
+    if (room.players.length < 2) {
+      let botIdx = 0;
       while (room.players.length < 2) {
-        const i = room.players.length - 1;
         room.players.push({
           socketId: null, playerId: `bot-${uuidv4().slice(0, 8)}`,
-          nickname: botNames[i] || `Bot ${i + 1}`,
+          nickname: BOT_NAMES[botIdx++] || `Bot ${botIdx}`,
           hand: [], score: 0, connected: true, isBot: true
         });
       }
       io.to(room.code).emit('roomUpdate', { players: playerList(room) });
     }
-
-    if (room.players.length < 2) return socket.emit('error', { message: '2人以上が必要です' });
 
     io.to(room.code).emit('gameStarting');
     setTimeout(() => startRound(room), 1000);
