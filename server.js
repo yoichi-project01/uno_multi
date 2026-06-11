@@ -1,5 +1,6 @@
 'use strict';
 
+require('dotenv').config();
 const express = require('express');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
@@ -8,7 +9,7 @@ const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const { createDeck, shuffle, calculateHandPoints } = require('./game/cardDeck');
 const { mod, canPlay, getPlayableUids, resolveCardEffect } = require('./game/gameEngine');
-const db = require('./db');
+const { insertUser, getUserByEmail } = require('./db');
 
 const app = express();
 const httpServer = createServer(app);
@@ -27,13 +28,6 @@ function hashPassword(pw) {
   return crypto.createHash('sha256').update('uno-salt:' + pw).digest('hex');
 }
 
-// ── Prepared statements ───────────────────────────────────────────────────────
-const stmtInsertUser = db.prepare(
-  'INSERT INTO users (email, nickname, password_hash, player_id) VALUES (?, ?, ?, ?)'
-);
-const stmtGetUserByEmail = db.prepare(
-  'SELECT nickname, password_hash, player_id FROM users WHERE email = ?'
-);
 
 // ── Express ───────────────────────────────────────────────────────────────────
 
@@ -440,7 +434,7 @@ io.on('connection', (socket) => {
   });
 
   // ── register ──
-  socket.on('register', ({ email, nickname, password } = {}) => {
+  socket.on('register', async ({ email, nickname, password } = {}) => {
     if (!email || !nickname || !password)
       return socket.emit('authError', { message: '全ての項目を入力してください' });
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
@@ -452,10 +446,10 @@ io.on('connection', (socket) => {
 
     const playerId = uuidv4();
     try {
-      stmtInsertUser.run(email.toLowerCase(), nickname, hashPassword(password), playerId);
+      await insertUser(email.toLowerCase(), nickname, hashPassword(password), playerId);
       socket.emit('authSuccess', { playerId, nickname });
     } catch (err) {
-      if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      if (err.code === '23505') { // PostgreSQL unique violation
         socket.emit('authError', { message: 'このメールアドレスは既に登録されています' });
       } else {
         console.error('register error:', err);
@@ -465,15 +459,19 @@ io.on('connection', (socket) => {
   });
 
   // ── login ──
-  socket.on('login', ({ email, password } = {}) => {
+  socket.on('login', async ({ email, password } = {}) => {
     if (!email || !password)
       return socket.emit('authError', { message: 'メールアドレスとパスワードを入力してください' });
 
-    const user = stmtGetUserByEmail.get(email.toLowerCase());
-    if (!user || user.password_hash !== hashPassword(password))
-      return socket.emit('authError', { message: 'メールアドレスまたはパスワードが正しくありません' });
-
-    socket.emit('authSuccess', { playerId: user.player_id, nickname: user.nickname });
+    try {
+      const user = await getUserByEmail(email.toLowerCase());
+      if (!user || user.password_hash !== hashPassword(password))
+        return socket.emit('authError', { message: 'メールアドレスまたはパスワードが正しくありません' });
+      socket.emit('authSuccess', { playerId: user.player_id, nickname: user.nickname });
+    } catch (err) {
+      console.error('login error:', err);
+      socket.emit('authError', { message: 'サーバーエラーが発生しました' });
+    }
   });
 
   // ── startGame ──

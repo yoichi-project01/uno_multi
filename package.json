@@ -8,8 +8,9 @@
     "dev": "npx nodemon server.js"
   },
   "dependencies": {
-    "better-sqlite3": "^12.10.0",
+    "dotenv": "^17.4.2",
     "express": "^4.18.2",
+    "pg": "^8.21.0",
     "socket.io": "^4.7.2",
     "uuid": "^9.0.0"
   }

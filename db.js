@@ -1,26 +1,53 @@
 'use strict';
 
-const Database = require('better-sqlite3');
-const path = require('path');
-const fs = require('fs');
+require('dotenv').config();
+const { Pool } = require('pg');
 
-const DATA_DIR = path.join(__dirname, 'data');
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL が設定されていません。.env ファイルを確認してください。');
+}
 
-const db = new Database(path.join(DATA_DIR, 'uno.db'));
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+  max: 5,
+  idleTimeoutMillis: 30000,
+});
 
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+// ── Schema migration ──────────────────────────────────────────────────────────
+async function migrate() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id            SERIAL      PRIMARY KEY,
+      email         TEXT        UNIQUE NOT NULL,
+      nickname      TEXT        NOT NULL,
+      password_hash TEXT        NOT NULL,
+      player_id     TEXT        UNIQUE NOT NULL,
+      created_at    BIGINT      NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
+    );
+  `);
+  console.log('DB: migration OK');
+}
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    email         TEXT    UNIQUE NOT NULL COLLATE NOCASE,
-    nickname      TEXT    NOT NULL,
-    password_hash TEXT    NOT NULL,
-    player_id     TEXT    UNIQUE NOT NULL,
-    created_at    INTEGER NOT NULL DEFAULT (unixepoch())
+migrate().catch(err => {
+  console.error('DB migration failed:', err.message);
+  process.exit(1);
+});
+
+// ── Query helpers ─────────────────────────────────────────────────────────────
+async function insertUser(email, nickname, passwordHash, playerId) {
+  await pool.query(
+    'INSERT INTO users (email, nickname, password_hash, player_id) VALUES ($1, $2, $3, $4)',
+    [email, nickname, passwordHash, playerId]
   );
-`);
+}
 
-module.exports = db;
+async function getUserByEmail(email) {
+  const { rows } = await pool.query(
+    'SELECT nickname, password_hash, player_id FROM users WHERE email = $1',
+    [email]
+  );
+  return rows[0] ?? null;
+}
+
+module.exports = { insertUser, getUserByEmail };
