@@ -172,6 +172,25 @@ function setupSocket() {
     if (loginVisible) els.loginUsername?.focus(); else els.regUsername?.focus();
   });
 
+  socket.on('disconnect', () => {
+    // 認証待ち中に切断された場合、ボタンを復元してエラーを表示
+    const loginVisible = !els.formLogin?.classList.contains('hidden');
+    const loginBtn = els.formLogin?.querySelector('.auth-submit-btn');
+    const regBtn = els.formRegister?.querySelector('.auth-submit-btn');
+    if (loginBtn?.disabled) {
+      loginBtn.disabled = false;
+      loginBtn.textContent = 'ログイン';
+      els.loginError.textContent = 'サーバーに接続できません。再度お試しください。';
+      els.loginError.classList.remove('hidden');
+    }
+    if (regBtn?.disabled) {
+      regBtn.disabled = false;
+      regBtn.textContent = 'アカウント作成';
+      els.registerError.textContent = 'サーバーに接続できません。再度お試しください。';
+      els.registerError.classList.remove('hidden');
+    }
+  });
+
   socket.on('roomCreated', ({ roomCode, playerId, players }) => {
     saveSession(roomCode, playerId, myNickname);
     isHost = true;
