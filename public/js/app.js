@@ -534,9 +534,12 @@ function renderOpponents(players, currentPlayerIndex) {
     ).join('');
 
     div.innerHTML = `
-      <div class="opponent-name-bar avatar-${idx}">${escHtml(player.nickname)}${player.connected === false ? ' 📵' : ''}</div>
+      <div class="opponent-name-bar">${escHtml(player.nickname)}${player.connected === false ? ' 📵' : ''}</div>
       <div class="opponent-hand">${miniCards}</div>
-      <div class="opponent-score">${player.cardCount}枚 · ${player.score}pt</div>
+      <div class="opponent-info-row">
+        <span class="opponent-card-count">${player.cardCount}枚</span>
+        <span class="opponent-score">${player.score}pt</span>
+      </div>
     `;
     els.opponentsArea.appendChild(div);
   });
