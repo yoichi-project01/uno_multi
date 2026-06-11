@@ -426,17 +426,18 @@ io.on('connection', (socket) => {
   });
 
   // ── startGame ──
-  socket.on('startGame', () => {
+  socket.on('startGame', ({ botCount = 0 } = {}) => {
     const room = getRoom(socket);
     const meta = getMeta(socket);
     if (!room || !meta) return;
     if (room.hostPlayerId !== meta.playerId) return socket.emit('error', { message: 'ホストのみ開始できます' });
     if (room.status !== 'waiting') return;
 
-    // 人数が足りない場合はボットで補充（最低2人）
-    if (room.players.length < 2) {
+    // 指定数のボットを追加（最大4人まで）
+    const toAdd = Math.min(botCount, 4 - room.players.length);
+    if (toAdd > 0) {
       let botIdx = 0;
-      while (room.players.length < 2) {
+      for (let i = 0; i < toAdd; i++) {
         room.players.push({
           socketId: null, playerId: `bot-${uuidv4().slice(0, 8)}`,
           nickname: BOT_NAMES[botIdx++] || `Bot ${botIdx}`,
@@ -444,6 +445,10 @@ io.on('connection', (socket) => {
         });
       }
       io.to(room.code).emit('roomUpdate', { players: playerList(room) });
+    }
+
+    if (room.players.length < 2) {
+      return socket.emit('error', { message: '最低2人（BOT含む）必要です' });
     }
 
     io.to(room.code).emit('gameStarting');

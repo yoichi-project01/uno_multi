@@ -41,6 +41,7 @@ const els = {
   waitingPlayers: $('waiting-players'),
   btnStart: $('btn-start'),
   waitingForHost: $('waiting-for-host'),
+  botSelector: $('bot-selector'),
   opponentsArea: $('opponents-area'),
   btnDraw: $('btn-draw-card'),
   deckCount: $('deck-count'),
@@ -125,6 +126,7 @@ function setupSocket() {
     els.displayCode.textContent = roomCode;
     els.btnStart.classList.toggle('hidden', !host);
     els.waitingForHost.classList.toggle('hidden', host);
+    els.botSelector.classList.toggle('hidden', !host);
     // If reconnecting to an active game, gameState event will fire next
   });
 
@@ -136,6 +138,7 @@ function setupSocket() {
       isHost = me.isHost;
       els.btnStart.classList.toggle('hidden', !isHost);
       els.waitingForHost.classList.toggle('hidden', isHost);
+      els.botSelector.classList.toggle('hidden', !isHost);
     }
   });
 
@@ -298,6 +301,7 @@ function setupSocket() {
       showScreen('waiting');
       els.btnStart.classList.toggle('hidden', !isHost);
       els.waitingForHost.classList.toggle('hidden', isHost);
+      els.botSelector.classList.toggle('hidden', !isHost);
     }, 3000);
   });
 
@@ -344,8 +348,18 @@ function bindEvents() {
     navigator.clipboard.writeText(url).then(() => showToast('URLをコピーしました！', 1500));
   });
 
+  // ボット数ボタンのトグル
+  document.querySelectorAll('.bot-count-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.bot-count-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
   els.btnStart.addEventListener('click', () => {
-    socket.emit('startGame');
+    const activeBtn = document.querySelector('.bot-count-btn.active');
+    const botCount = activeBtn ? parseInt(activeBtn.dataset.count, 10) : 0;
+    socket.emit('startGame', { botCount });
   });
 
   els.btnDraw.addEventListener('click', () => {
@@ -424,6 +438,7 @@ function showWaitingRoom(roomCode, players, host) {
   els.displayCode.textContent = roomCode;
   els.btnStart.classList.toggle('hidden', !host);
   els.waitingForHost.classList.toggle('hidden', host);
+  els.botSelector.classList.toggle('hidden', !host);
   renderWaitingPlayers(players);
 }
 
