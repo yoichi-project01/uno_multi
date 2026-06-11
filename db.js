@@ -18,12 +18,11 @@ const pool = new Pool({
 async function migrate() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
-      id            SERIAL      PRIMARY KEY,
-      email         TEXT        UNIQUE NOT NULL,
-      nickname      TEXT        NOT NULL,
-      password_hash TEXT        NOT NULL,
-      player_id     TEXT        UNIQUE NOT NULL,
-      created_at    BIGINT      NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
+      id            SERIAL PRIMARY KEY,
+      username      TEXT   UNIQUE NOT NULL,
+      password_hash TEXT   NOT NULL,
+      player_id     TEXT   UNIQUE NOT NULL,
+      created_at    BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
     );
   `);
   console.log('DB: migration OK');
@@ -35,19 +34,19 @@ migrate().catch(err => {
 });
 
 // ── Query helpers ─────────────────────────────────────────────────────────────
-async function insertUser(email, nickname, passwordHash, playerId) {
+async function insertUser(username, passwordHash, playerId) {
   await pool.query(
-    'INSERT INTO users (email, nickname, password_hash, player_id) VALUES ($1, $2, $3, $4)',
-    [email, nickname, passwordHash, playerId]
+    'INSERT INTO users (username, password_hash, player_id) VALUES ($1, $2, $3)',
+    [username, passwordHash, playerId]
   );
 }
 
-async function getUserByEmail(email) {
+async function getUserByUsername(username) {
   const { rows } = await pool.query(
-    'SELECT nickname, password_hash, player_id FROM users WHERE email = $1',
-    [email]
+    'SELECT username, password_hash, player_id FROM users WHERE username = $1',
+    [username]
   );
   return rows[0] ?? null;
 }
 
-module.exports = { insertUser, getUserByEmail };
+module.exports = { insertUser, getUserByUsername };

@@ -9,7 +9,7 @@ const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const { createDeck, shuffle, calculateHandPoints } = require('./game/cardDeck');
 const { mod, canPlay, getPlayableUids, resolveCardEffect } = require('./game/gameEngine');
-const { insertUser, getUserByEmail } = require('./db');
+const { insertUser, getUserByUsername } = require('./db');
 
 const app = express();
 const httpServer = createServer(app);
@@ -434,23 +434,23 @@ io.on('connection', (socket) => {
   });
 
   // ── register ──
-  socket.on('register', async ({ email, nickname, password } = {}) => {
-    if (!email || !nickname || !password)
-      return socket.emit('authError', { message: '全ての項目を入力してください' });
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-      return socket.emit('authError', { message: 'メールアドレスの形式が正しくありません' });
-    if (nickname.length < 1 || nickname.length > 16)
-      return socket.emit('authError', { message: 'ニックネームは1〜16文字で入力してください' });
+  socket.on('register', async ({ username, password } = {}) => {
+    if (!username || !password)
+      return socket.emit('authError', { message: 'ユーザー名とパスワードを入力してください' });
+    if (username.length < 2 || username.length > 16)
+      return socket.emit('authError', { message: 'ユーザー名は2〜16文字で入力してください' });
+    if (!/^[a-zA-Z0-9_぀-ヿ一-鿿]+$/.test(username))
+      return socket.emit('authError', { message: 'ユーザー名に使えない文字が含まれています' });
     if (password.length < 4)
       return socket.emit('authError', { message: 'パスワードは4文字以上で入力してください' });
 
     const playerId = uuidv4();
     try {
-      await insertUser(email.toLowerCase(), nickname, hashPassword(password), playerId);
-      socket.emit('authSuccess', { playerId, nickname });
+      await insertUser(username, hashPassword(password), playerId);
+      socket.emit('authSuccess', { playerId, nickname: username });
     } catch (err) {
-      if (err.code === '23505') { // PostgreSQL unique violation
-        socket.emit('authError', { message: 'このメールアドレスは既に登録されています' });
+      if (err.code === '23505') {
+        socket.emit('authError', { message: 'このユーザー名は既に使われています' });
       } else {
         console.error('register error:', err);
         socket.emit('authError', { message: 'サーバーエラーが発生しました' });
@@ -459,15 +459,15 @@ io.on('connection', (socket) => {
   });
 
   // ── login ──
-  socket.on('login', async ({ email, password } = {}) => {
-    if (!email || !password)
-      return socket.emit('authError', { message: 'メールアドレスとパスワードを入力してください' });
+  socket.on('login', async ({ username, password } = {}) => {
+    if (!username || !password)
+      return socket.emit('authError', { message: 'ユーザー名とパスワードを入力してください' });
 
     try {
-      const user = await getUserByEmail(email.toLowerCase());
+      const user = await getUserByUsername(username);
       if (!user || user.password_hash !== hashPassword(password))
-        return socket.emit('authError', { message: 'メールアドレスまたはパスワードが正しくありません' });
-      socket.emit('authSuccess', { playerId: user.player_id, nickname: user.nickname });
+        return socket.emit('authError', { message: 'ユーザー名またはパスワードが正しくありません' });
+      socket.emit('authSuccess', { playerId: user.player_id, nickname: user.username });
     } catch (err) {
       console.error('login error:', err);
       socket.emit('authError', { message: 'サーバーエラーが発生しました' });

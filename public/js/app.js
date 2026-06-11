@@ -39,11 +39,10 @@ const els = {
   btnLoginBack: $('btn-login-back'),
   formLogin: $('form-login'),
   formRegister: $('form-register'),
-  loginEmail: $('login-email'),
+  loginUsername: $('login-username'),
   loginPassword: $('login-password'),
   loginError: $('login-error'),
-  regNickname: $('reg-nickname'),
-  regEmail: $('reg-email'),
+  regUsername: $('reg-username'),
   regPassword: $('reg-password'),
   registerError: $('register-error'),
   nickname: $('input-nickname'),
@@ -169,6 +168,8 @@ function setupSocket() {
     // submitボタンを再有効化
     const btn = (loginVisible ? els.formLogin : els.formRegister).querySelector('.auth-submit-btn');
     if (btn) { btn.disabled = false; btn.textContent = loginVisible ? 'ログイン' : 'アカウント作成'; }
+    // 入力欄を再フォーカス
+    if (loginVisible) els.loginUsername?.focus(); else els.regUsername?.focus();
   });
 
   socket.on('roomCreated', ({ roomCode, playerId, players }) => {
@@ -422,26 +423,25 @@ function bindEvents() {
   // ── Login form submit ──
   els.formLogin.addEventListener('submit', e => {
     e.preventDefault();
-    const email = els.loginEmail.value.trim();
+    const username = els.loginUsername.value.trim();
     const password = els.loginPassword.value;
     els.loginError.classList.add('hidden');
     const btn = els.formLogin.querySelector('.auth-submit-btn');
     btn.disabled = true;
     btn.textContent = '確認中...';
-    socket.emit('login', { email, password });
+    socket.emit('login', { username, password });
   });
 
   // ── Register form submit ──
   els.formRegister.addEventListener('submit', e => {
     e.preventDefault();
-    const nickname = els.regNickname.value.trim();
-    const email = els.regEmail.value.trim();
+    const username = els.regUsername.value.trim();
     const password = els.regPassword.value;
     els.registerError.classList.add('hidden');
     const btn = els.formRegister.querySelector('.auth-submit-btn');
     btn.disabled = true;
     btn.textContent = '作成中...';
-    socket.emit('register', { email, nickname, password });
+    socket.emit('register', { username, password });
   });
 
   els.btnCreate.addEventListener('click', () => {

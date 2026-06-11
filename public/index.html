@@ -63,8 +63,8 @@
     <!-- Login form -->
     <form id="form-login" class="auth-form" autocomplete="on">
       <div class="form-group">
-        <label for="login-email">メールアドレス</label>
-        <input id="login-email" type="email" placeholder="email@example.com" autocomplete="email" inputmode="email">
+        <label for="login-username">ユーザー名</label>
+        <input id="login-username" type="text" placeholder="ユーザー名" autocomplete="username" maxlength="16">
       </div>
       <div class="form-group">
         <label for="login-password">パスワード</label>
@@ -80,12 +80,8 @@
     <!-- Register form -->
     <form id="form-register" class="auth-form hidden" autocomplete="on">
       <div class="form-group">
-        <label for="reg-nickname">ニックネーム</label>
-        <input id="reg-nickname" type="text" maxlength="16" placeholder="ゲーム内で表示される名前" autocomplete="nickname">
-      </div>
-      <div class="form-group">
-        <label for="reg-email">メールアドレス</label>
-        <input id="reg-email" type="email" placeholder="email@example.com" autocomplete="email" inputmode="email">
+        <label for="reg-username">ユーザー名</label>
+        <input id="reg-username" type="text" maxlength="16" placeholder="2〜16文字（ゲーム内で表示）" autocomplete="username">
       </div>
       <div class="form-group">
         <label for="reg-password">パスワード</label>
