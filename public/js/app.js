@@ -21,10 +21,11 @@ let myNickname = null;
 let isHost = false;
 let gameState = null;
 let selectedUid = null;
-let pendingColorCard = null;  // uid of wild card waiting for color
+let pendingColorCard = null;
 let emoteOpen = false;
 let countdownTimer = null;
-let imageCache = {}; // imageId → 'ok'|'fail'
+let imageCache = {};
+let pendingLandingEffect = false; // 相手カード着地アニメーション用フラグ
 
 // ── DOM Refs ──────────────────────────────────────────────────────────────────
 const screens = { top: $('screen-top'), waiting: $('screen-waiting'), game: $('screen-game'), roundResult: $('screen-round-result'), gameEnd: $('screen-game-end') };
@@ -158,6 +159,14 @@ function setupSocket() {
     const isMe = playerId === myPlayerId;
     els.turnLabel.textContent = isMe ? 'あなたのターン！' : `${player?.nickname || '?'} のターン`;
     els.btnPass.classList.add('hidden');
+    if (isMe) {
+      showTurnBanner();
+      // Green flash on game screen
+      const gs = screens.game;
+      gs.classList.remove('my-turn-flash');
+      void gs.offsetWidth;
+      gs.classList.add('my-turn-flash');
+    }
   });
 
   socket.on('timerTick', ({ seconds }) => {
@@ -167,9 +176,8 @@ function setupSocket() {
   socket.on('cardPlayed', ({ playerId, imageId }) => {
     const isMe = playerId === myPlayerId;
     if (!isMe) {
-      // Animate the top card change (gameState event will update actual card)
-      els.topCard.classList.add('played');
-      setTimeout(() => els.topCard.classList.remove('played'), 400);
+      // Opponent played: trigger landing animation when gameState updates top card
+      pendingLandingEffect = true;
     }
   });
 
@@ -503,6 +511,12 @@ function renderTopCard(card, currentColor) {
   els.topCard.innerHTML = '';
   els.topCard.className = `card card--${card.color}`;
   renderCardContent(els.topCard, card);
+
+  // 相手カード着地アニメーション
+  if (pendingLandingEffect) {
+    pendingLandingEffect = false;
+    triggerLandingEffect();
+  }
 }
 
 function renderMyHand(hand, playableUids, drawnCardUid, isMyTurn) {
@@ -558,24 +572,112 @@ function handleCardClick(card, isPlayable, isMyTurn) {
   if (gameState?.waitingForColor) return;
 
   if (card.type === 'wild' || card.type === 'wild-draw4') {
-    // Play the card first; server will broadcast waitingForColor
+    const el = els.myHand.querySelector(`[data-uid="${card.uid}"]`);
+    if (el) flyCardToDiscard(el);
     socket.emit('playCard', { uid: card.uid });
     selectedUid = null;
     els.btnPass.classList.add('hidden');
   } else {
-    // Two-tap for regular cards: select then play
     if (selectedUid === card.uid) {
+      // 2回目タップ → プレイ
+      const el = els.myHand.querySelector(`[data-uid="${card.uid}"]`);
+      if (el) flyCardToDiscard(el);
       socket.emit('playCard', { uid: card.uid });
       selectedUid = null;
       els.btnPass.classList.add('hidden');
     } else {
-      // Deselect previous
-      document.querySelectorAll('.hand-card.selected').forEach(c => c.classList.remove('selected'));
+      // 1回目タップ → 選択
+      document.querySelectorAll('.hand-card.selected').forEach(c => {
+        c.classList.remove('selected', 'just-selected');
+      });
       selectedUid = card.uid;
       const el = els.myHand.querySelector(`[data-uid="${card.uid}"]`);
-      if (el) el.classList.add('selected');
+      if (el) {
+        el.classList.add('selected', 'just-selected');
+        el.addEventListener('animationend', () => el.classList.remove('just-selected'), { once: true });
+      }
     }
   }
+}
+
+// ── Play Animation ────────────────────────────────────────────────────────────
+function flyCardToDiscard(sourceEl) {
+  const srcRect = sourceEl.getBoundingClientRect();
+  const dstRect = els.topCard.getBoundingClientRect();
+
+  // 元のカードを即座に非表示（サーバー応答後に再描画される）
+  sourceEl.style.opacity = '0';
+  sourceEl.style.pointerEvents = 'none';
+
+  // 飛ぶクローンを生成
+  const clone = sourceEl.cloneNode(true);
+  const rot = (Math.random() - 0.5) * 28;
+  clone.style.cssText = `
+    position: fixed;
+    left: ${srcRect.left}px; top: ${srcRect.top}px;
+    width: ${srcRect.width}px; height: ${srcRect.height}px;
+    margin: 0; z-index: 999; pointer-events: none;
+    transition:
+      left   0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      top    0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      width  0.38s ease, height 0.38s ease,
+      transform 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      opacity 0.1s ease 0.32s;
+    transform-origin: center center;
+    transform: scale(1.05);
+  `;
+  document.body.appendChild(clone);
+
+  // 次フレームでアニメーション開始
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    clone.style.left      = `${dstRect.left}px`;
+    clone.style.top       = `${dstRect.top}px`;
+    clone.style.width     = `${dstRect.width}px`;
+    clone.style.height    = `${dstRect.height}px`;
+    clone.style.transform = `rotate(${rot}deg) scale(1.08)`;
+    clone.style.opacity   = '0';
+  }));
+
+  // 着地エフェクト
+  setTimeout(() => {
+    clone.remove();
+    triggerLandingEffect(rot);
+  }, 420);
+}
+
+function triggerLandingEffect(rot = -5) {
+  // バウンスアニメーション
+  els.topCard.style.setProperty('--land-rot', `${rot}deg`);
+  els.topCard.classList.remove('card-landing');
+  void els.topCard.offsetWidth; // reflow
+  els.topCard.classList.add('card-landing');
+  els.topCard.addEventListener('animationend', () => els.topCard.classList.remove('card-landing'), { once: true });
+
+  // リップル
+  const ripple = document.createElement('div');
+  ripple.className = 'play-ripple';
+  const discardArea = els.topCard.parentElement;
+  discardArea.style.position = 'relative';
+  discardArea.appendChild(ripple);
+  setTimeout(() => ripple.remove(), 600);
+}
+
+// "あなたのターン" バナー
+let bannerTimer = null;
+function showTurnBanner() {
+  // 既存バナーを削除
+  document.querySelectorAll('.turn-banner').forEach(b => b.remove());
+  if (bannerTimer) clearTimeout(bannerTimer);
+
+  const banner = document.createElement('div');
+  banner.className = 'turn-banner';
+  banner.textContent = '✨ あなたのターン！';
+  document.body.appendChild(banner);
+
+  bannerTimer = setTimeout(() => {
+    banner.classList.add('out');
+    banner.addEventListener('animationend', () => banner.remove(), { once: true });
+  }, 1800);
 }
 
 // ── Timer ─────────────────────────────────────────────────────────────────────
