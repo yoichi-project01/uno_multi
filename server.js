@@ -14,6 +14,7 @@ const io = new Server(httpServer);
 
 const PORT = process.env.PORT || 3000;
 const TURN_SECONDS = 15;
+const TEST_ROOM_CODE = '1111'; // ソロテスト用: ボットが自動参加するルームコード
 
 // Map<roomCode, roomState>
 const rooms = new Map();
@@ -94,6 +95,107 @@ function broadcastGameState(room) {
   }
 }
 
+// ── Bot logic ─────────────────────────────────────────────────────────────────
+
+function chooseBotColor(hand) {
+  const counts = { red: 0, blue: 0, green: 0, yellow: 0 };
+  for (const c of hand) { if (c.color in counts) counts[c.color]++; }
+  return Object.keys(counts).reduce((a, b) => counts[a] >= counts[b] ? a : b);
+}
+
+function executeBotTurn(room, pIdx) {
+  if (room.status !== 'playing') return;
+  const player = room.players[pIdx];
+  if (!player?.isBot || pIdx !== room.currentPlayerIndex) return;
+  if (room.waitingForColor) return;
+
+  const playableUids = getPlayableUids(player.hand, room.topCard, room.currentColor);
+
+  if (playableUids.length === 0) {
+    // Draw and auto-pass
+    const drawn = drawFromDeck(room, 1);
+    if (drawn.length > 0) {
+      player.hand.push(...drawn);
+      io.to(room.code).emit('playerDrewCards', { playerId: player.playerId, count: 1 });
+    }
+    const next = mod(pIdx + room.direction, room.players.length);
+    advanceTurn(room, next);
+    broadcastGameState(room);
+    return;
+  }
+
+  // Play a random valid card (prefer non-wild to preserve wilds)
+  const nonWild = playableUids.filter(uid => {
+    const c = player.hand.find(h => h.uid === uid);
+    return c && c.color !== 'wild';
+  });
+  const uid = (nonWild.length > 0 ? nonWild : playableUids)[Math.floor(Math.random() * (nonWild.length || playableUids.length))];
+
+  const cardIdx = player.hand.findIndex(c => c.uid === uid);
+  const card = player.hand[cardIdx];
+  const isLastCard = player.hand.length === 1;
+
+  player.hand.splice(cardIdx, 1);
+  room.discardPile.push(card);
+  room.topCard = card;
+  stopTimer(room);
+  room.lastActivity = Date.now();
+
+  io.to(room.code).emit('cardPlayed', { playerId: player.playerId, imageId: card.imageId });
+
+  if (room.unoState?.playerId === player.playerId) room.unoState = null;
+  if (player.hand.length === 1) {
+    room.unoState = { playerId: player.playerId, declared: false };
+    io.to(room.code).emit('unoWindow', { playerId: player.playerId });
+    // Bot auto-declares after short delay (gives humans a brief challenge window)
+    setTimeout(() => {
+      if (room.unoState?.playerId === player.playerId && !room.unoState.declared) {
+        room.unoState.declared = true;
+        io.to(room.code).emit('unoDeclared', { playerId: player.playerId });
+      }
+    }, 800);
+  }
+
+  if (isLastCard) {
+    if (card.type === 'draw2' || card.type === 'wild-draw4') {
+      const drawCount = card.type === 'draw2' ? 2 : 4;
+      const nextIdx = mod(pIdx + room.direction, room.players.length);
+      const drawn = drawFromDeck(room, drawCount);
+      room.players[nextIdx].hand.push(...drawn);
+      io.to(room.code).emit('playerDrewCards', { playerId: room.players[nextIdx].playerId, count: drawn.length });
+    }
+    broadcastGameState(room);
+    endRound(room, player.playerId);
+    return;
+  }
+
+  const { nextIndex, newDirection, requiresColorChoice, effects } = resolveCardEffect(
+    card, pIdx, room.direction, room.players.length
+  );
+  room.direction = newDirection;
+
+  for (const eff of effects) {
+    const target = room.players[eff.playerIndex];
+    const drawn = drawFromDeck(room, eff.drawCount);
+    target.hand.push(...drawn);
+    io.to(room.code).emit('playerDrewCards', { playerId: target.playerId, count: eff.drawCount });
+  }
+
+  if (card.color !== 'wild') room.currentColor = card.color;
+
+  if (requiresColorChoice) {
+    const color = chooseBotColor(player.hand);
+    room.currentColor = color;
+    io.to(room.code).emit('colorChosen', { color, playerId: player.playerId });
+    advanceTurn(room, nextIndex);
+    broadcastGameState(room);
+    return;
+  }
+
+  advanceTurn(room, nextIndex);
+  broadcastGameState(room);
+}
+
 // ── Timer ─────────────────────────────────────────────────────────────────────
 
 function stopTimer(room) {
@@ -135,6 +237,17 @@ function startTurn(room) {
       broadcastGameState(room);
     }
   }, 1000);
+
+  // Bot auto-play
+  if (player.isBot) {
+    const botId = player.playerId;
+    const delay = 1200 + Math.random() * 800;
+    setTimeout(() => {
+      if (room.players[room.currentPlayerIndex]?.playerId === botId) {
+        executeBotTurn(room, room.currentPlayerIndex);
+      }
+    }, delay);
+  }
 }
 
 function advanceTurn(room, toIndex) {
@@ -318,8 +431,23 @@ io.on('connection', (socket) => {
     const meta = getMeta(socket);
     if (!room || !meta) return;
     if (room.hostPlayerId !== meta.playerId) return socket.emit('error', { message: 'ホストのみ開始できます' });
-    if (room.players.length < 2) return socket.emit('error', { message: '2人以上が必要です' });
     if (room.status !== 'waiting') return;
+
+    // テストルーム: 1人でも開始できるようボットを補充
+    if (room.code === TEST_ROOM_CODE && room.players.length < 2) {
+      const botNames = ['Bot Alice', 'Bot Bob'];
+      while (room.players.length < 2) {
+        const i = room.players.length - 1;
+        room.players.push({
+          socketId: null, playerId: `bot-${uuidv4().slice(0, 8)}`,
+          nickname: botNames[i] || `Bot ${i + 1}`,
+          hand: [], score: 0, connected: true, isBot: true
+        });
+      }
+      io.to(room.code).emit('roomUpdate', { players: playerList(room) });
+    }
+
+    if (room.players.length < 2) return socket.emit('error', { message: '2人以上が必要です' });
 
     io.to(room.code).emit('gameStarting');
     setTimeout(() => startRound(room), 1000);
