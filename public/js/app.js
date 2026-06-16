@@ -182,9 +182,22 @@ function setupSocket() {
   socket = io();
 
   socket.on('connect', () => {
-    // Attempt rejoin if we have saved session data
     if (myPlayerId && myRoomCode) {
       socket.emit('joinRoom', { roomCode: myRoomCode, nickname: myNickname || '', playerId: myPlayerId });
+    } else if (myPlayerId && !myNickname) {
+      // nicknameがlocalStorageにない場合、サーバーから取得
+      socket.emit('restoreSession', { playerId: myPlayerId });
+    }
+  });
+
+  socket.on('sessionRestored', ({ nickname, avatar }) => {
+    myNickname = nickname;
+    myAvatar = avatar;
+    saveSession(myRoomCode, myPlayerId, nickname, avatar);
+    updateUserChip(nickname, myAvatar);
+    // ロビー画面を表示中なら入力欄からユーザーカードに切り替え
+    if (document.getElementById('screen-lobby').classList.contains('active')) {
+      openLobby();
     }
   });
 
@@ -234,6 +247,7 @@ function setupSocket() {
   socket.on('settingsSuccess', ({ field, value }) => {
     if (field === 'avatar') {
       myAvatar = value;
+      saveSession(myRoomCode, myPlayerId, myNickname, value);
       updateUserChip(myNickname, myAvatar);
       document.querySelectorAll('.avatar-option').forEach(b => {
         b.classList.toggle('selected', b.dataset.avatar === value);
@@ -542,14 +556,14 @@ function closeGuestSheet() {
 // ── Event Bindings ────────────────────────────────────────────────────────────
 function bindEvents() {
   els.btnGuestLink.addEventListener('click', () => {
-    myPlayerId = null;
-    myNickname = null;
     openLobby();
   });
   els.btnJoinLink.addEventListener('click', () => {
-    myPlayerId = null;
-    myNickname = null;
-    openLobby();
+    if (myPlayerId && myNickname) {
+      showScreen('join');
+    } else {
+      openLobby();
+    }
   });
   els.btnLoginLink.addEventListener('click', () => showScreen('login'));
   els.btnLoginBack.addEventListener('click', () => showScreen('top'));
@@ -705,7 +719,7 @@ function bindEvents() {
 
   els.btnLeaveWaiting.addEventListener('click', () => {
     socket.emit('leaveRoom');
-    clearSession();
+    clearRoomSession();
     showScreen('top');
   });
 
@@ -1173,6 +1187,11 @@ function saveSession(roomCode, playerId, nickname, avatar) {
   if (nickname) localStorage.setItem('uno_nickname', nickname);
   if (avatar) localStorage.setItem('uno_avatar', avatar);
   else if (avatar === null) localStorage.removeItem('uno_avatar');
+}
+
+function clearRoomSession() {
+  myRoomCode = null;
+  localStorage.removeItem('uno_roomCode');
 }
 
 function clearSession() {

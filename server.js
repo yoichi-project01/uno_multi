@@ -462,6 +462,19 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ── restoreSession ──
+  socket.on('restoreSession', async ({ playerId } = {}) => {
+    if (!playerId) return;
+    try {
+      const user = await getUserByPlayerId(playerId);
+      if (!user) return;
+      sessions.set(socket.id, { playerId: user.player_id, username: user.username });
+      socket.emit('sessionRestored', { nickname: user.username, avatar: user.avatar || null });
+    } catch (err) {
+      console.error('restoreSession error:', err);
+    }
+  });
+
   // ── login ──
   socket.on('login', async ({ username, password } = {}) => {
     if (!username || !password)
