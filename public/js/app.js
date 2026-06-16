@@ -18,6 +18,7 @@ let socket = null;
 let myPlayerId = null;
 let myRoomCode = null;
 let myNickname = null;
+let myAvatar = null;
 let isHost = false;
 let gameState = null;
 let selectedUid = null;
@@ -28,7 +29,7 @@ let imageCache = {};
 let pendingLandingEffect = false; // 相手カード着地アニメーション用フラグ
 
 // ── DOM Refs ──────────────────────────────────────────────────────────────────
-const screens = { top: $('screen-top'), login: $('screen-login'), waiting: $('screen-waiting'), game: $('screen-game'), roundResult: $('screen-round-result'), gameEnd: $('screen-game-end') };
+const screens = { top: $('screen-top'), login: $('screen-login'), waiting: $('screen-waiting'), game: $('screen-game'), roundResult: $('screen-round-result'), gameEnd: $('screen-game-end'), settings: $('screen-settings') };
 const els = {
   guestSheet: $('guest-sheet'),
   btnGuestLink: $('btn-guest-link'),
@@ -83,7 +84,28 @@ const els = {
   nextCountdown: $('next-round-countdown'),
   gameWinner: $('game-winner-name'),
   finalScores: $('final-scores-table'),
-  btnBackLobby: $('btn-back-to-lobby')
+  btnBackLobby: $('btn-back-to-lobby'),
+  // Top screen user chip
+  userChip: $('user-chip'),
+  chipAvatar: $('chip-avatar'),
+  chipName: $('chip-name'),
+  btnSettings: $('btn-settings'),
+  // Settings screen
+  btnSettingsBack: $('btn-settings-back'),
+  btnLogout: $('btn-logout'),
+  avatarGrid: $('avatar-grid'),
+  avatarMsg: $('avatar-msg'),
+  formChangeUsername: $('form-change-username'),
+  newUsername: $('new-username'),
+  confirmPwUsername: $('confirm-pw-username'),
+  usernameChangeMsg: $('username-change-msg'),
+  formChangePassword: $('form-change-password'),
+  currentPw: $('current-pw'),
+  newPw: $('new-pw'),
+  passwordChangeMsg: $('password-change-msg'),
+  formDeleteAccount: $('form-delete-account'),
+  deletePw: $('delete-pw'),
+  deleteMsg: $('delete-msg'),
 };
 
 function $(id) { return document.getElementById(id); }
@@ -152,11 +174,13 @@ function setupSocket() {
 
   socket.on('error', ({ message }) => showError(message));
 
-  socket.on('authSuccess', ({ playerId, nickname }) => {
+  socket.on('authSuccess', ({ playerId, nickname, avatar }) => {
     saveSession(null, playerId, nickname);
     myPlayerId = playerId;
+    myAvatar = avatar || null;
     showScreen('top');
     openSheetAfterAuth(nickname);
+    updateUserChip(nickname, myAvatar);
   });
 
   socket.on('authError', ({ message }) => {
@@ -189,6 +213,58 @@ function setupSocket() {
       els.registerError.textContent = 'サーバーに接続できません。再度お試しください。';
       els.registerError.classList.remove('hidden');
     }
+  });
+
+  // ── Settings events ──
+  socket.on('settingsSuccess', ({ field, value }) => {
+    if (field === 'avatar') {
+      myAvatar = value;
+      updateUserChip(myNickname, myAvatar);
+      document.querySelectorAll('.avatar-option').forEach(b => {
+        b.classList.toggle('selected', b.dataset.avatar === value);
+      });
+      showSettingsMsg(els.avatarMsg, 'アイコンを変更しました', true);
+    } else if (field === 'username') {
+      myNickname = value;
+      saveSession(myRoomCode, myPlayerId, value);
+      updateUserChip(value, myAvatar);
+      showSettingsMsg(els.usernameChangeMsg, 'ユーザー名を変更しました', true);
+      els.newUsername.value = '';
+      els.confirmPwUsername.value = '';
+      const btn = els.formChangeUsername.querySelector('button[type="submit"]');
+      if (btn) { btn.disabled = false; btn.textContent = '変更する'; }
+    } else if (field === 'password') {
+      showSettingsMsg(els.passwordChangeMsg, 'パスワードを変更しました', true);
+      els.currentPw.value = '';
+      els.newPw.value = '';
+      const btn = els.formChangePassword.querySelector('button[type="submit"]');
+      if (btn) { btn.disabled = false; btn.textContent = '変更する'; }
+    }
+  });
+
+  socket.on('settingsError', ({ field, message }) => {
+    if (field === 'avatar') {
+      showSettingsMsg(els.avatarMsg, message, false);
+    } else if (field === 'username') {
+      showSettingsMsg(els.usernameChangeMsg, message, false);
+      const btn = els.formChangeUsername.querySelector('button[type="submit"]');
+      if (btn) { btn.disabled = false; btn.textContent = '変更する'; }
+    } else if (field === 'password') {
+      showSettingsMsg(els.passwordChangeMsg, message, false);
+      const btn = els.formChangePassword.querySelector('button[type="submit"]');
+      if (btn) { btn.disabled = false; btn.textContent = '変更する'; }
+    } else if (field === 'delete') {
+      showSettingsMsg(els.deleteMsg, message, false);
+      const btn = els.formDeleteAccount.querySelector('button[type="submit"]');
+      if (btn) { btn.disabled = false; btn.textContent = 'アカウントを削除する'; }
+    }
+  });
+
+  socket.on('accountDeleted', () => {
+    clearSession();
+    myAvatar = null;
+    els.userChip.classList.add('hidden');
+    showScreen('top');
   });
 
   socket.on('roomCreated', ({ roomCode, playerId, players }) => {
@@ -393,6 +469,40 @@ function setupSocket() {
   });
 }
 
+// ── Settings helpers ──────────────────────────────────────────────────────────
+function updateUserChip(nickname, avatar) {
+  if (!nickname) { els.userChip.classList.add('hidden'); return; }
+  els.userChip.classList.remove('hidden');
+  els.chipName.textContent = nickname;
+  if (avatar) {
+    els.chipAvatar.textContent = avatar;
+    els.chipAvatar.style.fontSize = '1.1rem';
+    els.chipAvatar.style.background = '#111';
+  } else {
+    els.chipAvatar.textContent = nickname[0].toUpperCase();
+    els.chipAvatar.style.fontSize = '.95rem';
+    els.chipAvatar.style.background = '#111';
+  }
+}
+
+function showSettingsMsg(el, message, success) {
+  el.textContent = message;
+  el.className = 'settings-msg ' + (success ? 'success' : 'error');
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.add('hidden'), 3000);
+}
+
+function openSettings() {
+  // 現在選択中のアバターをハイライト
+  document.querySelectorAll('.avatar-option').forEach(b => {
+    b.classList.toggle('selected', b.dataset.avatar === myAvatar);
+  });
+  // メッセージをリセット
+  [els.avatarMsg, els.usernameChangeMsg, els.passwordChangeMsg, els.deleteMsg]
+    .forEach(el => el.classList.add('hidden'));
+  showScreen('settings');
+}
+
 // ── Guest sheet open/close ────────────────────────────────────────────────────
 function openGuestSheet() {
   els.guestSheet.classList.remove('hidden');
@@ -415,6 +525,60 @@ function bindEvents() {
   els.sheetBackdrop.addEventListener('click', closeGuestSheet);
   els.btnLoginLink.addEventListener('click', () => showScreen('login'));
   els.btnLoginBack.addEventListener('click', () => showScreen('top'));
+
+  // ── Settings ──
+  els.btnSettings.addEventListener('click', openSettings);
+  els.btnSettingsBack.addEventListener('click', () => showScreen('top'));
+
+  els.btnLogout.addEventListener('click', () => {
+    myAvatar = null;
+    myPlayerId = null;
+    myNickname = null;
+    clearSession();
+    els.userChip.classList.add('hidden');
+    // ゲストシートのニックネームを元に戻す
+    els.nickname.readOnly = false;
+    els.nickname.value = '';
+    const banner = document.querySelector('.auth-user-banner');
+    if (banner) banner.remove();
+    showScreen('top');
+  });
+
+  els.avatarGrid.addEventListener('click', e => {
+    const btn = e.target.closest('.avatar-option');
+    if (!btn) return;
+    socket.emit('setAvatar', { avatar: btn.dataset.avatar });
+  });
+
+  els.formChangeUsername.addEventListener('submit', e => {
+    e.preventDefault();
+    const newUsername = els.newUsername.value.trim();
+    const password = els.confirmPwUsername.value;
+    const btn = els.formChangeUsername.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = '変更中...';
+    socket.emit('changeUsername', { newUsername, password });
+  });
+
+  els.formChangePassword.addEventListener('submit', e => {
+    e.preventDefault();
+    const currentPassword = els.currentPw.value;
+    const newPassword = els.newPw.value;
+    const btn = els.formChangePassword.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = '変更中...';
+    socket.emit('changePassword', { currentPassword, newPassword });
+  });
+
+  els.formDeleteAccount.addEventListener('submit', e => {
+    e.preventDefault();
+    if (!confirm('本当にアカウントを削除しますか？この操作は取り消せません。')) return;
+    const password = els.deletePw.value;
+    const btn = els.formDeleteAccount.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = '削除中...';
+    socket.emit('deleteAccount', { password });
+  });
 
   // ── Login / Register tabs ──
   document.querySelectorAll('.login-tab').forEach(tab => {

@@ -948,3 +948,112 @@ input::placeholder { color: var(--text-muted); }
   .card-label { font-size: 1.7rem; }
   .top-form { max-width: 400px; }
 }
+
+/* ── User Chip (top screen, logged-in) ────────────────────────────────────── */
+.user-chip {
+  position: absolute;
+  top: 20px; right: 16px;
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(0,0,0,.07);
+  border-radius: 40px;
+  padding: 6px 10px 6px 6px;
+  z-index: 10;
+}
+.user-chip.hidden { display: none; }
+.user-chip-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: #111; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; font-weight: 700; flex-shrink: 0;
+}
+.user-chip-name {
+  font-size: .9rem; font-weight: 600; color: #111; max-width: 100px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.user-chip-settings {
+  background: none; border: none; cursor: pointer;
+  color: #555; padding: 2px; display: flex; align-items: center; justify-content: center;
+  transition: color .15s;
+}
+.user-chip-settings:hover { color: #111; }
+
+/* ── Settings Screen ──────────────────────────────────────────────────────── */
+.settings-screen {
+  background: #f5f5f7;
+  overflow-y: auto;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.settings-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 56px 20px 12px;
+  background: #f5f5f7;
+  position: sticky; top: 0; z-index: 10;
+}
+.settings-back-btn {
+  background: none; border: none; cursor: pointer;
+  color: #333; padding: 4px; display: flex; align-items: center; justify-content: center;
+  transition: color .15s;
+}
+.settings-back-btn:hover { color: #000; }
+.settings-header-title {
+  font-size: 1.1rem; font-weight: 700; color: #111;
+}
+
+.settings-body {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 8px 16px 48px; max-width: 480px; width: 100%; margin: 0 auto;
+}
+
+.settings-section {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.settings-section-title {
+  font-size: .8rem; font-weight: 700; color: #888;
+  text-transform: uppercase; letter-spacing: .07em;
+}
+
+.settings-form { display: flex; flex-direction: column; gap: 10px; }
+.settings-form .form-group label { color: #555; }
+.settings-form input {
+  background: #f5f5f7; border-color: rgba(0,0,0,.12); color: #111;
+}
+.settings-form input:focus { border-color: #111; background: #fff; }
+.settings-form input::placeholder { color: #aaa; }
+
+.settings-btn { width: 100%; }
+
+.settings-msg {
+  font-size: .85rem; padding: 8px 12px; border-radius: 8px;
+}
+.settings-msg.success { background: #d1fae5; color: #065f46; }
+.settings-msg.error   { background: #fee2e2; color: #991b1b; }
+.settings-msg.hidden  { display: none; }
+
+/* Avatar grid */
+.avatar-grid {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+}
+.avatar-option {
+  aspect-ratio: 1; border-radius: 12px; border: 2px solid transparent;
+  background: #f5f5f7; font-size: 1.4rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color .15s, background .15s, transform .1s;
+}
+.avatar-option:hover { background: #e5e7eb; transform: scale(1.08); }
+.avatar-option.selected { border-color: #111; background: #f0f0f0; }
+
+/* Danger zone */
+.settings-danger { border: 1.5px solid #fecaca; }
+.danger-title { color: #dc2626 !important; }
+.btn-danger {
+  background: #dc2626; color: #fff; border: none; border-radius: 10px;
+  cursor: pointer; font-weight: 700; font-size: .95rem; padding: 13px 20px;
+  transition: background .15s;
+}
+.btn-danger:hover { background: #b91c1c; }
+.btn-danger:active { transform: scale(.97); }

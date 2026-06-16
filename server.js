@@ -9,7 +9,7 @@ const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const { createDeck, shuffle, calculateHandPoints } = require('./game/cardDeck');
 const { mod, canPlay, getPlayableUids, resolveCardEffect } = require('./game/gameEngine');
-const { insertUser, getUserByUsername } = require('./db');
+const { insertUser, getUserByUsername, getUserByPlayerId, updateUsername, updatePassword, updateAvatar, deleteUser } = require('./db');
 
 const app = express();
 const httpServer = createServer(app);
@@ -18,11 +18,14 @@ const io = new Server(httpServer);
 const PORT = process.env.PORT || 3000;
 const TURN_SECONDS = 15;
 const BOT_NAMES = ['Bot Alice', 'Bot Bob', 'Bot Carol'];
+const VALID_AVATARS = ['🎮','🎯','🃏','🎲','⭐','🔥','💎','🌟','👑','🐉','🦊','🐺'];
 
 // Map<roomCode, roomState>
 const rooms = new Map();
 // Map<socketId, { roomCode, playerId }>
 const socketMeta = new Map();
+// Map<socketId, { playerId, username }>
+const sessions = new Map();
 
 function hashPassword(pw) {
   return crypto.createHash('sha256').update('uno-salt:' + pw).digest('hex');
@@ -447,7 +450,8 @@ io.on('connection', (socket) => {
     const playerId = uuidv4();
     try {
       await insertUser(username, hashPassword(password), playerId);
-      socket.emit('authSuccess', { playerId, nickname: username });
+      sessions.set(socket.id, { playerId, username });
+      socket.emit('authSuccess', { playerId, nickname: username, avatar: null });
     } catch (err) {
       if (err.code === '23505') {
         socket.emit('authError', { message: 'このユーザー名は既に使われています' });
@@ -467,10 +471,93 @@ io.on('connection', (socket) => {
       const user = await getUserByUsername(username);
       if (!user || user.password_hash !== hashPassword(password))
         return socket.emit('authError', { message: 'ユーザー名またはパスワードが正しくありません' });
-      socket.emit('authSuccess', { playerId: user.player_id, nickname: user.username });
+      sessions.set(socket.id, { playerId: user.player_id, username: user.username });
+      socket.emit('authSuccess', { playerId: user.player_id, nickname: user.username, avatar: user.avatar });
     } catch (err) {
       console.error('login error:', err);
       socket.emit('authError', { message: 'サーバーエラーが発生しました' });
+    }
+  });
+
+  // ── changeUsername ──
+  socket.on('changeUsername', async ({ newUsername, password } = {}) => {
+    const session = sessions.get(socket.id);
+    if (!session) return socket.emit('settingsError', { field: 'username', message: 'ログインが必要です' });
+    newUsername = newUsername?.trim();
+    if (!newUsername || !password)
+      return socket.emit('settingsError', { field: 'username', message: 'ユーザー名とパスワードを入力してください' });
+    if (newUsername.length < 2 || newUsername.length > 16)
+      return socket.emit('settingsError', { field: 'username', message: 'ユーザー名は2〜16文字で入力してください' });
+    if (!/^[a-zA-Z0-9_぀-ヿ一-鿿]+$/.test(newUsername))
+      return socket.emit('settingsError', { field: 'username', message: 'ユーザー名に使えない文字が含まれています' });
+    try {
+      const user = await getUserByPlayerId(session.playerId);
+      if (!user || user.password_hash !== hashPassword(password))
+        return socket.emit('settingsError', { field: 'username', message: 'パスワードが正しくありません' });
+      await updateUsername(session.playerId, newUsername);
+      sessions.set(socket.id, { ...session, username: newUsername });
+      socket.emit('settingsSuccess', { field: 'username', value: newUsername });
+    } catch (err) {
+      if (err.code === '23505') {
+        socket.emit('settingsError', { field: 'username', message: 'このユーザー名は既に使われています' });
+      } else {
+        console.error('changeUsername error:', err);
+        socket.emit('settingsError', { field: 'username', message: 'サーバーエラーが発生しました' });
+      }
+    }
+  });
+
+  // ── changePassword ──
+  socket.on('changePassword', async ({ currentPassword, newPassword } = {}) => {
+    const session = sessions.get(socket.id);
+    if (!session) return socket.emit('settingsError', { field: 'password', message: 'ログインが必要です' });
+    if (!currentPassword || !newPassword)
+      return socket.emit('settingsError', { field: 'password', message: 'パスワードを入力してください' });
+    if (newPassword.length < 4)
+      return socket.emit('settingsError', { field: 'password', message: '新しいパスワードは4文字以上で入力してください' });
+    try {
+      const user = await getUserByPlayerId(session.playerId);
+      if (!user || user.password_hash !== hashPassword(currentPassword))
+        return socket.emit('settingsError', { field: 'password', message: '現在のパスワードが正しくありません' });
+      await updatePassword(session.playerId, hashPassword(newPassword));
+      socket.emit('settingsSuccess', { field: 'password' });
+    } catch (err) {
+      console.error('changePassword error:', err);
+      socket.emit('settingsError', { field: 'password', message: 'サーバーエラーが発生しました' });
+    }
+  });
+
+  // ── setAvatar ──
+  socket.on('setAvatar', async ({ avatar } = {}) => {
+    const session = sessions.get(socket.id);
+    if (!session) return socket.emit('settingsError', { field: 'avatar', message: 'ログインが必要です' });
+    if (!VALID_AVATARS.includes(avatar))
+      return socket.emit('settingsError', { field: 'avatar', message: '無効なアバターです' });
+    try {
+      await updateAvatar(session.playerId, avatar);
+      socket.emit('settingsSuccess', { field: 'avatar', value: avatar });
+    } catch (err) {
+      console.error('setAvatar error:', err);
+      socket.emit('settingsError', { field: 'avatar', message: 'サーバーエラーが発生しました' });
+    }
+  });
+
+  // ── deleteAccount ──
+  socket.on('deleteAccount', async ({ password } = {}) => {
+    const session = sessions.get(socket.id);
+    if (!session) return socket.emit('settingsError', { field: 'delete', message: 'ログインが必要です' });
+    if (!password)
+      return socket.emit('settingsError', { field: 'delete', message: 'パスワードを入力してください' });
+    try {
+      const user = await getUserByPlayerId(session.playerId);
+      if (!user || user.password_hash !== hashPassword(password))
+        return socket.emit('settingsError', { field: 'delete', message: 'パスワードが正しくありません' });
+      await deleteUser(session.playerId);
+      sessions.delete(socket.id);
+      socket.emit('accountDeleted');
+    } catch (err) {
+      console.error('deleteAccount error:', err);
+      socket.emit('settingsError', { field: 'delete', message: 'サーバーエラーが発生しました' });
     }
   });
 
@@ -685,7 +772,7 @@ io.on('connection', (socket) => {
 
   // ── leaveRoom ──
   socket.on('leaveRoom', () => handleLeave(socket, false));
-  socket.on('disconnect', () => handleLeave(socket, true));
+  socket.on('disconnect', () => { sessions.delete(socket.id); handleLeave(socket, true); });
 });
 
 function handleLeave(socket, isDisconnect) {

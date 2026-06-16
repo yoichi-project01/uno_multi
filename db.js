@@ -7,9 +7,9 @@ if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL が設定されていません。.env ファイルを確認してください。');
 }
 
-// Neon は pooler 接続文字列に channel_binding=require が付くことがある
-// pg ドライバーが未対応のパラメータを除去して接続
-const connectionString = process.env.DATABASE_URL.replace('channel_binding=require&', '').replace('&channel_binding=require', '');
+const connectionString = process.env.DATABASE_URL
+  .replace('channel_binding=require&', '')
+  .replace('&channel_binding=require', '');
 
 const pool = new Pool({
   connectionString,
@@ -18,7 +18,6 @@ const pool = new Pool({
   idleTimeoutMillis: 30000,
 });
 
-// ── Schema migration ──────────────────────────────────────────────────────────
 async function migrate() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -26,9 +25,11 @@ async function migrate() {
       username      TEXT   UNIQUE NOT NULL,
       password_hash TEXT   NOT NULL,
       player_id     TEXT   UNIQUE NOT NULL,
+      avatar        TEXT,
       created_at    BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
     );
   `);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;`);
   console.log('DB: migration OK');
 }
 
@@ -37,7 +38,6 @@ migrate().catch(err => {
   process.exit(1);
 });
 
-// ── Query helpers ─────────────────────────────────────────────────────────────
 async function insertUser(username, passwordHash, playerId) {
   await pool.query(
     'INSERT INTO users (username, password_hash, player_id) VALUES ($1, $2, $3)',
@@ -47,10 +47,34 @@ async function insertUser(username, passwordHash, playerId) {
 
 async function getUserByUsername(username) {
   const { rows } = await pool.query(
-    'SELECT username, password_hash, player_id FROM users WHERE username = $1',
+    'SELECT username, password_hash, player_id, avatar FROM users WHERE username = $1',
     [username]
   );
   return rows[0] ?? null;
 }
 
-module.exports = { insertUser, getUserByUsername };
+async function getUserByPlayerId(playerId) {
+  const { rows } = await pool.query(
+    'SELECT username, password_hash, player_id, avatar FROM users WHERE player_id = $1',
+    [playerId]
+  );
+  return rows[0] ?? null;
+}
+
+async function updateUsername(playerId, newUsername) {
+  await pool.query('UPDATE users SET username = $1 WHERE player_id = $2', [newUsername, playerId]);
+}
+
+async function updatePassword(playerId, passwordHash) {
+  await pool.query('UPDATE users SET password_hash = $1 WHERE player_id = $2', [passwordHash, playerId]);
+}
+
+async function updateAvatar(playerId, avatar) {
+  await pool.query('UPDATE users SET avatar = $1 WHERE player_id = $2', [avatar, playerId]);
+}
+
+async function deleteUser(playerId) {
+  await pool.query('DELETE FROM users WHERE player_id = $1', [playerId]);
+}
+
+module.exports = { insertUser, getUserByUsername, getUserByPlayerId, updateUsername, updatePassword, updateAvatar, deleteUser };
