@@ -29,7 +29,7 @@ let imageCache = {};
 let pendingLandingEffect = false; // 相手カード着地アニメーション用フラグ
 
 // ── DOM Refs ──────────────────────────────────────────────────────────────────
-const screens = { top: $('screen-top'), login: $('screen-login'), waiting: $('screen-waiting'), game: $('screen-game'), roundResult: $('screen-round-result'), gameEnd: $('screen-game-end'), settings: $('screen-settings') };
+const screens = { top: $('screen-top'), login: $('screen-login'), lobby: $('screen-lobby'), join: $('screen-join'), waiting: $('screen-waiting'), game: $('screen-game'), roundResult: $('screen-round-result'), gameEnd: $('screen-game-end'), settings: $('screen-settings') };
 const els = {
   guestSheet: $('guest-sheet'),
   btnGuestLink: $('btn-guest-link'),
@@ -85,6 +85,21 @@ const els = {
   gameWinner: $('game-winner-name'),
   finalScores: $('final-scores-table'),
   btnBackLobby: $('btn-back-to-lobby'),
+  // Lobby screen
+  btnLobbyBack: $('btn-lobby-back'),
+  lobbyUserCard: $('lobby-user-card'),
+  lobbyAvatarDisplay: $('lobby-avatar-display'),
+  lobbyUsernameText: $('lobby-username-text'),
+  lobbyNicknameGroup: $('lobby-nickname-group'),
+  lobbyNicknameInput: $('lobby-nickname-input'),
+  lobbyError: $('lobby-error'),
+  btnLobbyCreate: $('btn-lobby-create'),
+  btnGotoJoin: $('btn-goto-join'),
+  // Join screen
+  btnJoinBack: $('btn-join-back'),
+  joinRoomCodeInput: $('join-room-code-input'),
+  joinError: $('join-error'),
+  btnJoinSubmit: $('btn-join-submit'),
   // Top screen user chip
   userChip: $('user-chip'),
   chipAvatar: $('chip-avatar'),
@@ -117,28 +132,20 @@ function showScreen(name) {
   if (name === 'top' && els.guestSheet) els.guestSheet.classList.add('hidden');
 }
 
-// ログイン後にゲストシートを開く（ニックネーム欄にアカウント名を表示）
-let loggedInNickname = null;
-
-function openSheetAfterAuth(nickname) {
-  loggedInNickname = nickname;
-  myNickname = nickname;
-  // ニックネーム欄を更新して固定
-  els.nickname.value = nickname;
-  els.nickname.readOnly = true;
-  // バナー挿入
-  const existing = document.querySelector('.auth-user-banner');
-  if (existing) existing.remove();
-  const banner = document.createElement('div');
-  banner.className = 'auth-user-banner';
-  banner.innerHTML = `
-    <div class="auth-user-avatar">${escHtml(nickname[0].toUpperCase())}</div>
-    <div class="auth-user-info">
-      <div class="auth-user-name">${escHtml(nickname)}</div>
-      <div class="auth-user-label">ログイン済み</div>
-    </div>`;
-  els.guestSheet.querySelector('.guest-sheet-inner').prepend(banner);
-  openGuestSheet();
+function openLobby() {
+  if (myPlayerId && myNickname) {
+    els.lobbyUserCard.classList.remove('hidden');
+    els.lobbyNicknameGroup.classList.add('hidden');
+    const avatar = myAvatar || myNickname[0].toUpperCase();
+    els.lobbyAvatarDisplay.textContent = avatar;
+    els.lobbyUsernameText.textContent = myNickname;
+  } else {
+    els.lobbyUserCard.classList.add('hidden');
+    els.lobbyNicknameGroup.classList.remove('hidden');
+    els.lobbyNicknameInput.value = myNickname || '';
+  }
+  els.lobbyError.classList.add('hidden');
+  showScreen('lobby');
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -147,18 +154,26 @@ window.addEventListener('DOMContentLoaded', () => {
   myPlayerId = localStorage.getItem('uno_playerId');
   myRoomCode = localStorage.getItem('uno_roomCode');
   myNickname = localStorage.getItem('uno_nickname');
-
-  // Check if landed on /room/:code URL
-  const roomFromUrl = window.location.pathname.match(/^\/room\/(\d{4})$/);
-  if (roomFromUrl) {
-    els.roomCode.value = roomFromUrl[1];
-    els.roomCode.readOnly = true;
-    if (myNickname) els.nickname.value = myNickname;
-  }
+  myAvatar = localStorage.getItem('uno_avatar') || null;
 
   setupSocket();
   bindEvents();
-  showScreen('top');
+
+  // ログイン済みならユーザーチップを表示
+  if (myPlayerId && myNickname) updateUserChip(myNickname, myAvatar);
+
+  // /room/:code URL で直接開いた場合
+  const roomFromUrl = window.location.pathname.match(/^\/room\/(\d{4})$/);
+  if (roomFromUrl) {
+    els.joinRoomCodeInput.value = roomFromUrl[1];
+    if (myPlayerId && myNickname) {
+      showScreen('join');
+    } else {
+      openLobby();
+    }
+  } else {
+    showScreen('top');
+  }
 });
 
 // ── Socket Setup ──────────────────────────────────────────────────────────────
@@ -175,12 +190,11 @@ function setupSocket() {
   socket.on('error', ({ message }) => showError(message));
 
   socket.on('authSuccess', ({ playerId, nickname, avatar }) => {
-    saveSession(null, playerId, nickname);
+    saveSession(null, playerId, nickname, avatar);
     myPlayerId = playerId;
     myAvatar = avatar || null;
-    showScreen('top');
-    openSheetAfterAuth(nickname);
     updateUserChip(nickname, myAvatar);
+    openLobby();
   });
 
   socket.on('authError', ({ message }) => {
@@ -515,16 +529,63 @@ function closeGuestSheet() {
 // ── Event Bindings ────────────────────────────────────────────────────────────
 function bindEvents() {
   els.btnGuestLink.addEventListener('click', () => {
-    // ゲストとして開く場合はニックネーム欄を編集可能に戻す
-    els.nickname.readOnly = false;
-    const banner = document.querySelector('.auth-user-banner');
-    if (banner) banner.remove();
-    openGuestSheet();
+    myPlayerId = null;
+    myNickname = null;
+    openLobby();
   });
-  els.btnSheetClose.addEventListener('click', closeGuestSheet);
-  els.sheetBackdrop.addEventListener('click', closeGuestSheet);
   els.btnLoginLink.addEventListener('click', () => showScreen('login'));
   els.btnLoginBack.addEventListener('click', () => showScreen('top'));
+
+  // ── Lobby ──
+  els.btnLobbyBack.addEventListener('click', () => showScreen('top'));
+
+  els.btnLobbyCreate.addEventListener('click', () => {
+    const nick = myPlayerId ? myNickname : els.lobbyNicknameInput.value.trim();
+    if (!nick) {
+      els.lobbyError.textContent = 'ニックネームを入力してください';
+      els.lobbyError.classList.remove('hidden');
+      return;
+    }
+    myNickname = nick;
+    els.lobbyError.classList.add('hidden');
+    socket.emit('createRoom', { nickname: nick });
+  });
+
+  els.btnGotoJoin.addEventListener('click', () => {
+    if (!myPlayerId) {
+      const nick = els.lobbyNicknameInput.value.trim();
+      if (!nick) {
+        els.lobbyError.textContent = 'ニックネームを入力してください';
+        els.lobbyError.classList.remove('hidden');
+        return;
+      }
+      myNickname = nick;
+    }
+    els.lobbyError.classList.add('hidden');
+    els.joinError.classList.add('hidden');
+    els.joinRoomCodeInput.value = '';
+    showScreen('join');
+  });
+
+  els.lobbyNicknameInput.addEventListener('keydown', e => { if (e.key === 'Enter') els.btnLobbyCreate.click(); });
+
+  // ── Join ──
+  els.btnJoinBack.addEventListener('click', () => showScreen('lobby'));
+
+  els.btnJoinSubmit.addEventListener('click', () => {
+    const code = els.joinRoomCodeInput.value.trim();
+    if (!/^\d{4}$/.test(code)) {
+      els.joinError.textContent = '4桁のルームコードを入力してください';
+      els.joinError.classList.remove('hidden');
+      return;
+    }
+    const nick = myPlayerId ? myNickname : myNickname;
+    if (!nick) { showScreen('lobby'); return; }
+    els.joinError.classList.add('hidden');
+    socket.emit('joinRoom', { roomCode: code, nickname: nick });
+  });
+
+  els.joinRoomCodeInput.addEventListener('keydown', e => { if (e.key === 'Enter') els.btnJoinSubmit.click(); });
 
   // ── Settings ──
   els.btnSettings.addEventListener('click', openSettings);
@@ -532,15 +593,8 @@ function bindEvents() {
 
   els.btnLogout.addEventListener('click', () => {
     myAvatar = null;
-    myPlayerId = null;
-    myNickname = null;
     clearSession();
     els.userChip.classList.add('hidden');
-    // ゲストシートのニックネームを元に戻す
-    els.nickname.readOnly = false;
-    els.nickname.value = '';
-    const banner = document.querySelector('.auth-user-banner');
-    if (banner) banner.remove();
     showScreen('top');
   });
 
@@ -626,27 +680,6 @@ function bindEvents() {
     btn.textContent = '作成中...';
     socket.emit('register', { username, password });
   });
-
-  els.btnCreate.addEventListener('click', () => {
-    const nick = els.nickname.value.trim();
-    if (!nick) return showError('ニックネームを入力してください');
-    myNickname = nick;
-    hideError();
-    socket.emit('createRoom', { nickname: nick });
-  });
-
-  els.btnJoin.addEventListener('click', () => {
-    const nick = els.nickname.value.trim();
-    const code = els.roomCode.value.trim();
-    if (!nick) return showError('ニックネームを入力してください');
-    if (!/^\d{4}$/.test(code)) return showError('4桁のルームコードを入力してください');
-    myNickname = nick;
-    hideError();
-    socket.emit('joinRoom', { roomCode: code, nickname: nick });
-  });
-
-  els.nickname.addEventListener('keydown', e => { if (e.key === 'Enter') els.btnCreate.click(); });
-  els.roomCode.addEventListener('keydown', e => { if (e.key === 'Enter') els.btnJoin.click(); });
 
   els.btnLeaveWaiting.addEventListener('click', () => {
     socket.emit('leaveRoom');
@@ -1108,20 +1141,27 @@ function findPlayer(playerId) {
   return (gameState?.players || []).find(p => p.playerId === playerId) || null;
 }
 
-function saveSession(roomCode, playerId, nickname) {
-  myRoomCode = roomCode;
-  myPlayerId = playerId;
+function saveSession(roomCode, playerId, nickname, avatar) {
+  if (roomCode !== undefined) myRoomCode = roomCode;
+  if (playerId) myPlayerId = playerId;
   if (nickname) myNickname = nickname;
+  if (avatar !== undefined) myAvatar = avatar || null;
   if (roomCode) localStorage.setItem('uno_roomCode', roomCode);
   if (playerId) localStorage.setItem('uno_playerId', playerId);
   if (nickname) localStorage.setItem('uno_nickname', nickname);
+  if (avatar) localStorage.setItem('uno_avatar', avatar);
+  else if (avatar === null) localStorage.removeItem('uno_avatar');
 }
 
 function clearSession() {
   myRoomCode = null;
   myPlayerId = null;
+  myNickname = null;
+  myAvatar = null;
   localStorage.removeItem('uno_roomCode');
   localStorage.removeItem('uno_playerId');
+  localStorage.removeItem('uno_nickname');
+  localStorage.removeItem('uno_avatar');
 }
 
 function showError(msg) {

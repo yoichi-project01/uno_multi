@@ -104,6 +104,54 @@
   </div>
 </section>
 
+<!-- ② Lobby Screen -->
+<section id="screen-lobby" class="screen">
+  <div class="login-header">
+    <button id="btn-lobby-back" class="login-back-btn" aria-label="戻る">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M12.5 5L7.5 10L12.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <span class="login-header-logo">UNO</span>
+  </div>
+  <div class="login-body">
+    <!-- ログイン済みユーザーカード -->
+    <div id="lobby-user-card" class="lobby-user-card hidden">
+      <div id="lobby-avatar-display" class="lobby-avatar-display">🎮</div>
+      <div>
+        <div id="lobby-username-text" class="lobby-username-text"></div>
+        <div class="lobby-logged-label">ログイン済み</div>
+      </div>
+    </div>
+    <!-- ゲスト用ニックネーム入力 -->
+    <div id="lobby-nickname-group" class="form-group">
+      <label for="lobby-nickname-input">ニックネーム</label>
+      <input id="lobby-nickname-input" type="text" maxlength="16" placeholder="名前を入力..." autocomplete="off">
+    </div>
+    <div id="lobby-error" class="auth-error hidden"></div>
+    <button id="btn-lobby-create" class="btn auth-submit-btn">部屋を作る</button>
+    <div class="divider"><span>または</span></div>
+    <button id="btn-goto-join" class="btn btn-outline btn-large">部屋番号を入力</button>
+  </div>
+</section>
+
+<!-- ② Join Screen -->
+<section id="screen-join" class="screen">
+  <div class="login-header">
+    <button id="btn-join-back" class="login-back-btn" aria-label="戻る">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M12.5 5L7.5 10L12.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <span class="login-header-logo">UNO</span>
+  </div>
+  <div class="login-body">
+    <h1 class="login-title">部屋に参加</h1>
+    <div class="form-group">
+      <label for="join-room-code-input">ルームコード</label>
+      <input id="join-room-code-input" type="text" maxlength="4" placeholder="4桁のコード" pattern="[0-9]*" inputmode="numeric" autocomplete="off">
+    </div>
+    <div id="join-error" class="auth-error hidden"></div>
+    <button id="btn-join-submit" class="btn auth-submit-btn">参加する</button>
+  </div>
+</section>
+
 <!-- ③ Waiting Room -->
 <section id="screen-waiting" class="screen">
   <div class="waiting-header">
