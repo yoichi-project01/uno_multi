@@ -291,10 +291,17 @@
     <span class="settings-header-title">設定</span>
   </div>
 
+  <!-- タブ -->
+  <div class="settings-tabs">
+    <button class="settings-tab active" data-tab="avatar">アイコン</button>
+    <button class="settings-tab" data-tab="username">ユーザー名</button>
+    <button class="settings-tab" data-tab="password">パスワード</button>
+    <button class="settings-tab" data-tab="account">アカウント</button>
+  </div>
+
   <div class="settings-body">
-    <!-- アバター -->
-    <div class="settings-section">
-      <h3 class="settings-section-title">アイコン</h3>
+    <!-- タブ: アイコン -->
+    <div class="settings-tab-panel active" data-panel="avatar">
       <div class="avatar-grid" id="avatar-grid">
         <button class="avatar-option" data-avatar="🎮">🎮</button>
         <button class="avatar-option" data-avatar="🎯">🎯</button>
@@ -312,9 +319,8 @@
       <p id="avatar-msg" class="settings-msg hidden"></p>
     </div>
 
-    <!-- ユーザー名変更 -->
-    <div class="settings-section">
-      <h3 class="settings-section-title">ユーザー名変更</h3>
+    <!-- タブ: ユーザー名 -->
+    <div class="settings-tab-panel" data-panel="username">
       <form id="form-change-username" class="settings-form">
         <div class="form-group">
           <label for="new-username">新しいユーザー名</label>
@@ -325,13 +331,12 @@
           <input id="confirm-pw-username" type="password" placeholder="現在のパスワード" autocomplete="current-password">
         </div>
         <p id="username-change-msg" class="settings-msg hidden"></p>
-        <button type="submit" class="btn btn-secondary settings-btn">変更する</button>
+        <button type="submit" class="btn auth-submit-btn">変更する</button>
       </form>
     </div>
 
-    <!-- パスワード変更 -->
-    <div class="settings-section">
-      <h3 class="settings-section-title">パスワード変更</h3>
+    <!-- タブ: パスワード -->
+    <div class="settings-tab-panel" data-panel="password">
       <form id="form-change-password" class="settings-form">
         <div class="form-group">
           <label for="current-pw">現在のパスワード</label>
@@ -342,19 +347,16 @@
           <input id="new-pw" type="password" placeholder="4文字以上" autocomplete="new-password">
         </div>
         <p id="password-change-msg" class="settings-msg hidden"></p>
-        <button type="submit" class="btn btn-secondary settings-btn">変更する</button>
+        <button type="submit" class="btn auth-submit-btn">変更する</button>
       </form>
     </div>
 
-    <!-- ログアウト -->
-    <div class="settings-section">
+    <!-- タブ: アカウント -->
+    <div class="settings-tab-panel" data-panel="account">
       <button id="btn-logout" class="btn btn-outline settings-btn">ログアウト</button>
-    </div>
-
-    <!-- アカウント削除 -->
-    <div class="settings-section settings-danger">
-      <h3 class="settings-section-title danger-title">危険な操作</h3>
+      <div class="settings-divider"></div>
       <form id="form-delete-account" class="settings-form">
+        <p class="settings-danger-label">アカウントを削除すると元に戻せません</p>
         <div class="form-group">
           <label for="delete-pw">パスワード</label>
           <input id="delete-pw" type="password" placeholder="削除するにはパスワードを入力" autocomplete="current-password">

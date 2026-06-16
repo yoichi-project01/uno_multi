@@ -513,14 +513,21 @@ function showSettingsMsg(el, message, success) {
 }
 
 function openSettings() {
-  // 現在選択中のアバターをハイライト
   document.querySelectorAll('.avatar-option').forEach(b => {
     b.classList.toggle('selected', b.dataset.avatar === myAvatar);
   });
-  // メッセージをリセット
   [els.avatarMsg, els.usernameChangeMsg, els.passwordChangeMsg, els.deleteMsg]
-    .forEach(el => el.classList.add('hidden'));
+    .forEach(el => el?.classList.add('hidden'));
+  // 最初のタブをアクティブに
+  switchSettingsTab('avatar');
   showScreen('settings');
+}
+
+function switchSettingsTab(name) {
+  document.querySelectorAll('.settings-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.settings-tab-panel').forEach(p =>
+    p.classList.toggle('active', p.dataset.panel === name));
 }
 
 // ── Guest sheet open/close ────────────────────────────────────────────────────
@@ -601,6 +608,10 @@ function bindEvents() {
   // ── Settings ──
   els.btnSettings.addEventListener('click', openSettings);
   els.btnSettingsBack.addEventListener('click', () => showScreen('top'));
+
+  document.querySelectorAll('.settings-tab').forEach(tab => {
+    tab.addEventListener('click', () => switchSettingsTab(tab.dataset.tab));
+  });
 
   els.btnLogout.addEventListener('click', () => {
     myAvatar = null;
