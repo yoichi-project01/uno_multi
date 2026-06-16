@@ -488,8 +488,13 @@ function setupSocket() {
 
 // ── Settings helpers ──────────────────────────────────────────────────────────
 function updateUserChip(nickname, avatar) {
-  if (!nickname) { els.userChip.classList.add('hidden'); return; }
+  if (!nickname) {
+    els.userChip.classList.add('hidden');
+    els.btnLoginLink?.classList.remove('hidden');
+    return;
+  }
   els.userChip.classList.remove('hidden');
+  els.btnLoginLink?.classList.add('hidden');
   els.chipName.textContent = nickname;
   if (avatar) {
     els.chipAvatar.textContent = avatar;
