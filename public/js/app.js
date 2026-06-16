@@ -585,7 +585,7 @@ function bindEvents() {
     }
     myNickname = nick;
     els.lobbyError.classList.add('hidden');
-    showScreen('rules');
+    socket.emit('createRoom', { nickname: nick, rules: currentRules });
   });
 
   // ── Rules ──

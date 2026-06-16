@@ -131,6 +131,39 @@
       <input id="lobby-nickname-input" type="text" maxlength="16" placeholder="名前を入力..." autocomplete="off">
     </div>
     <div id="lobby-error" class="auth-error hidden"></div>
+    <!-- ルール設定 -->
+    <div class="lobby-rules">
+      <div class="lobby-rules-title">ルール設定</div>
+      <div class="lobby-rule-row">
+        <span class="lobby-rule-label">初期手札</span>
+        <div class="rule-options">
+          <button class="rule-opt active" data-rule="handSize" data-value="7">7枚</button>
+          <button class="rule-opt" data-rule="handSize" data-value="5">5枚</button>
+        </div>
+      </div>
+      <div class="lobby-rule-row">
+        <span class="lobby-rule-label">タイマー</span>
+        <div class="rule-options">
+          <button class="rule-opt active" data-rule="timerSeconds" data-value="15">15秒</button>
+          <button class="rule-opt" data-rule="timerSeconds" data-value="30">30秒</button>
+          <button class="rule-opt" data-rule="timerSeconds" data-value="0">なし</button>
+        </div>
+      </div>
+      <div class="lobby-rule-row">
+        <span class="lobby-rule-label">スタック</span>
+        <div class="rule-options">
+          <button class="rule-opt active" data-rule="drawStack" data-value="false">なし</button>
+          <button class="rule-opt" data-rule="drawStack" data-value="true">あり</button>
+        </div>
+      </div>
+      <div class="lobby-rule-row">
+        <span class="lobby-rule-label">勝利点数</span>
+        <div class="rule-options">
+          <button class="rule-opt active" data-rule="scoreLimit" data-value="500">500点</button>
+          <button class="rule-opt" data-rule="scoreLimit" data-value="300">300点</button>
+        </div>
+      </div>
+    </div>
     <button id="btn-lobby-create" class="btn auth-submit-btn">部屋を作る</button>
     <div class="divider"><span>または</span></div>
     <button id="btn-goto-join" class="btn btn-outline btn-large">部屋に参加</button>

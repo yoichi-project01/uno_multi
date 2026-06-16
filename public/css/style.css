@@ -1130,7 +1130,7 @@ input::placeholder { color: var(--text-muted); }
 .btn-danger:hover { background: #b91c1c; }
 .btn-danger:active { transform: scale(.97); }
 
-/* ── Rules Screen ─────────────────────────────────────────────────────────── */
+/* ── Rules Screen (standalone) ────────────────────────────────────────────── */
 #screen-rules { background: #fff; }
 #screen-rules .login-body { gap: 14px; }
 .rule-group { width: 100%; }
@@ -1138,15 +1138,34 @@ input::placeholder { color: var(--text-muted); }
   font-size: .8rem; color: #555; font-weight: 600;
   margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em;
 }
-.rule-options { display: flex; gap: 8px; }
+.rule-options { display: flex; gap: 6px; }
 .rule-opt {
-  flex: 1; padding: 11px 4px;
+  flex: 1; padding: 8px 4px;
   border: 1.5px solid #e5e7eb; background: #fff; color: #374151;
-  border-radius: 10px; font-size: .88rem; font-weight: 600;
+  border-radius: 8px; font-size: .82rem; font-weight: 600;
   cursor: pointer; transition: all .15s;
 }
 .rule-opt:hover { border-color: #9ca3af; background: #f9fafb; }
 .rule-opt.active { background: #111; color: #fff; border-color: #111; }
+
+/* ── Lobby inline rules ───────────────────────────────────────────────────── */
+.lobby-rules {
+  width: 100%;
+  background: #f9fafb; border: 1.5px solid #e5e7eb;
+  border-radius: 12px; padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.lobby-rules-title {
+  font-size: .72rem; font-weight: 700; color: #9ca3af;
+  text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px;
+}
+.lobby-rule-row {
+  display: flex; align-items: center; gap: 10px;
+}
+.lobby-rule-label {
+  font-size: .78rem; color: #555; font-weight: 600;
+  width: 52px; flex-shrink: 0;
+}
 
 /* Draw-stack badge (in-game) */
 .draw-stack-badge {
