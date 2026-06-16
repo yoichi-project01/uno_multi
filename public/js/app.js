@@ -33,6 +33,7 @@ const screens = { top: $('screen-top'), login: $('screen-login'), lobby: $('scre
 const els = {
   guestSheet: $('guest-sheet'),
   btnGuestLink: $('btn-guest-link'),
+  btnJoinLink: $('btn-join-link'),
   btnLoginLink: $('btn-login-link'),
   btnSheetClose: $('btn-sheet-close'),
   sheetBackdrop: document.querySelector('.guest-sheet-backdrop'),
@@ -531,6 +532,11 @@ function closeGuestSheet() {
 // ── Event Bindings ────────────────────────────────────────────────────────────
 function bindEvents() {
   els.btnGuestLink.addEventListener('click', () => {
+    myPlayerId = null;
+    myNickname = null;
+    openLobby();
+  });
+  els.btnJoinLink.addEventListener('click', () => {
     myPlayerId = null;
     myNickname = null;
     openLobby();

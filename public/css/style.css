@@ -105,6 +105,14 @@ html, body {
 }
 .splash-link.primary:hover { background: #333; }
 
+.splash-link.splash-link-sub {
+  font-size: .85rem;
+  color: #aaa;
+  padding: 10px 24px;
+  margin-top: 4px;
+}
+.splash-link.splash-link-sub:hover { background: transparent; color: #555; }
+
 /* ── Guest entry bottom sheet ─────────────────────────────────────────────── */
 .guest-sheet {
   position: fixed;
