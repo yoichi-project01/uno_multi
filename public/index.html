@@ -156,6 +156,49 @@
   </div>
 </section>
 
+<!-- ② Rules Screen -->
+<section id="screen-rules" class="screen">
+  <div class="login-header">
+    <button id="btn-rules-back" class="login-back-btn" aria-label="戻る">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M12.5 5L7.5 10L12.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <span class="login-header-logo">UNO</span>
+  </div>
+  <div class="login-body">
+    <h1 class="login-title">ルール設定</h1>
+    <div class="rule-group">
+      <div class="rule-label">初期手札枚数</div>
+      <div class="rule-options">
+        <button class="rule-opt active" data-rule="handSize" data-value="7">7枚（標準）</button>
+        <button class="rule-opt" data-rule="handSize" data-value="5">5枚</button>
+      </div>
+    </div>
+    <div class="rule-group">
+      <div class="rule-label">ターンタイマー</div>
+      <div class="rule-options">
+        <button class="rule-opt active" data-rule="timerSeconds" data-value="15">15秒</button>
+        <button class="rule-opt" data-rule="timerSeconds" data-value="30">30秒</button>
+        <button class="rule-opt" data-rule="timerSeconds" data-value="0">なし</button>
+      </div>
+    </div>
+    <div class="rule-group">
+      <div class="rule-label">ドロースタック</div>
+      <div class="rule-options">
+        <button class="rule-opt active" data-rule="drawStack" data-value="false">なし</button>
+        <button class="rule-opt" data-rule="drawStack" data-value="true">あり</button>
+      </div>
+    </div>
+    <div class="rule-group">
+      <div class="rule-label">勝利点数</div>
+      <div class="rule-options">
+        <button class="rule-opt active" data-rule="scoreLimit" data-value="500">500点</button>
+        <button class="rule-opt" data-rule="scoreLimit" data-value="300">300点</button>
+      </div>
+    </div>
+    <button id="btn-rules-create" class="btn auth-submit-btn">部屋を作る</button>
+  </div>
+</section>
+
 <!-- ③ Waiting Room -->
 <section id="screen-waiting" class="screen">
   <div class="waiting-header">
@@ -209,6 +252,7 @@
       <span id="timer-text" class="timer-text">15</span>
     </div>
     <div id="current-turn-label" class="turn-label"></div>
+    <div id="draw-stack-badge" class="draw-stack-badge hidden"></div>
   </div>
 
   <!-- My hand (bottom) -->

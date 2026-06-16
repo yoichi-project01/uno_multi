@@ -27,9 +27,10 @@ let emoteOpen = false;
 let countdownTimer = null;
 let imageCache = {};
 let pendingLandingEffect = false; // 相手カード着地アニメーション用フラグ
+let currentRules = { handSize: 7, timerSeconds: 15, drawStack: false, scoreLimit: 500 };
 
 // ── DOM Refs ──────────────────────────────────────────────────────────────────
-const screens = { top: $('screen-top'), login: $('screen-login'), lobby: $('screen-lobby'), join: $('screen-join'), waiting: $('screen-waiting'), game: $('screen-game'), roundResult: $('screen-round-result'), gameEnd: $('screen-game-end'), settings: $('screen-settings') };
+const screens = { top: $('screen-top'), login: $('screen-login'), lobby: $('screen-lobby'), join: $('screen-join'), rules: $('screen-rules'), waiting: $('screen-waiting'), game: $('screen-game'), roundResult: $('screen-round-result'), gameEnd: $('screen-game-end'), settings: $('screen-settings') };
 const els = {
   guestSheet: $('guest-sheet'),
   btnGuestLink: $('btn-guest-link'),
@@ -101,6 +102,10 @@ const els = {
   joinRoomCodeInput: $('join-room-code-input'),
   joinError: $('join-error'),
   btnJoinSubmit: $('btn-join-submit'),
+  // Rules screen
+  btnRulesBack: $('btn-rules-back'),
+  btnRulesCreate: $('btn-rules-create'),
+  drawStackBadge: $('draw-stack-badge'),
   // Top screen user chip
   userChip: $('user-chip'),
   chipAvatar: $('chip-avatar'),
@@ -580,7 +585,27 @@ function bindEvents() {
     }
     myNickname = nick;
     els.lobbyError.classList.add('hidden');
-    socket.emit('createRoom', { nickname: nick });
+    showScreen('rules');
+  });
+
+  // ── Rules ──
+  els.btnRulesBack.addEventListener('click', () => openLobby());
+
+  document.querySelectorAll('.rule-opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const rule = btn.dataset.rule;
+      const val = btn.dataset.value;
+      if (rule === 'handSize') currentRules.handSize = parseInt(val);
+      else if (rule === 'timerSeconds') currentRules.timerSeconds = parseInt(val);
+      else if (rule === 'drawStack') currentRules.drawStack = val === 'true';
+      else if (rule === 'scoreLimit') currentRules.scoreLimit = parseInt(val);
+      document.querySelectorAll(`.rule-opt[data-rule="${rule}"]`).forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  els.btnRulesCreate.addEventListener('click', () => {
+    socket.emit('createRoom', { nickname: myNickname, rules: currentRules });
   });
 
   els.btnGotoJoin.addEventListener('click', () => {
@@ -846,6 +871,14 @@ function renderGame(state) {
   updateColorIndicator(state.currentColor);
   updateDirectionBadge(state.direction);
   els.deckCount.textContent = state.deckCount;
+
+  // Draw stack badge
+  if (state.drawStackCount > 0) {
+    els.drawStackBadge.textContent = `ドロースタック +${state.drawStackCount}`;
+    els.drawStackBadge.classList.remove('hidden');
+  } else {
+    els.drawStackBadge.classList.add('hidden');
+  }
 
   // Restore UNO state on reconnect
   if (state.unoState && !state.unoState.declared) {

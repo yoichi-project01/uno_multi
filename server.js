@@ -79,6 +79,15 @@ function buildGameState(room, forPlayerId) {
   const isMyTurn = !!(cur && cur.playerId === forPlayerId && room.status === 'playing');
   const canAct = isMyTurn && !room.waitingForColor;
 
+  let playableUids = [];
+  if (canAct && me) {
+    if (room.drawStackCount > 0) {
+      playableUids = me.hand.filter(c => c.type === 'draw2' || c.type === 'wild-draw4').map(c => c.uid);
+    } else {
+      playableUids = getPlayableUids(me.hand, room.topCard, room.currentColor);
+    }
+  }
+
   return {
     players: playerList(room),
     topCard: room.topCard,
@@ -87,14 +96,14 @@ function buildGameState(room, forPlayerId) {
     direction: room.direction,
     deckCount: room.deck.length,
     myHand: me ? me.hand : [],
-    playableUids: (canAct && me)
-      ? getPlayableUids(me.hand, room.topCard, room.currentColor) : [],
+    playableUids,
     drawnCardUid: (isMyTurn && room.hasDrawnThisTurn) ? room.drawnCardUid : null,
     unoState: room.unoState,
     waitingForColor: room.waitingForColor ? room.waitingForColor.playerId : null,
     hasDrawnThisTurn: isMyTurn ? room.hasDrawnThisTurn : false,
     isMyTurn,
-    status: room.status
+    status: room.status,
+    drawStackCount: room.drawStackCount || 0
   };
 }
 
@@ -120,14 +129,26 @@ function executeBotTurn(room, pIdx) {
   if (!player?.isBot || pIdx !== room.currentPlayerIndex) return;
   if (room.waitingForColor) return;
 
-  const playableUids = getPlayableUids(player.hand, room.topCard, room.currentColor);
+  let playableUids;
+  if (room.drawStackCount > 0) {
+    playableUids = player.hand.filter(c => c.type === 'draw2' || c.type === 'wild-draw4').map(c => c.uid);
+  } else {
+    playableUids = getPlayableUids(player.hand, room.topCard, room.currentColor);
+  }
 
   if (playableUids.length === 0) {
-    // Draw and auto-pass
-    const drawn = drawFromDeck(room, 1);
-    if (drawn.length > 0) {
+    if (room.drawStackCount > 0) {
+      const count = room.drawStackCount;
+      const drawn = drawFromDeck(room, count);
       player.hand.push(...drawn);
-      io.to(room.code).emit('playerDrewCards', { playerId: player.playerId, count: 1 });
+      io.to(room.code).emit('playerDrewCards', { playerId: player.playerId, count });
+      room.drawStackCount = 0;
+    } else {
+      const drawn = drawFromDeck(room, 1);
+      if (drawn.length > 0) {
+        player.hand.push(...drawn);
+        io.to(room.code).emit('playerDrewCards', { playerId: player.playerId, count: 1 });
+      }
     }
     const next = mod(pIdx + room.direction, room.players.length);
     advanceTurn(room, next);
@@ -185,6 +206,21 @@ function executeBotTurn(room, pIdx) {
   );
   room.direction = newDirection;
 
+  if (room.rules?.drawStack && (card.type === 'draw2' || card.type === 'wild-draw4')) {
+    const addCount = card.type === 'draw2' ? 2 : 4;
+    room.drawStackCount += addCount;
+    if (card.color !== 'wild') room.currentColor = card.color;
+    const stackNext = mod(pIdx + room.direction, room.players.length);
+    if (requiresColorChoice) {
+      const color = chooseBotColor(player.hand);
+      room.currentColor = color;
+      io.to(room.code).emit('colorChosen', { color, playerId: player.playerId });
+    }
+    advanceTurn(room, stackNext);
+    broadcastGameState(room);
+    return;
+  }
+
   for (const eff of effects) {
     const target = room.players[eff.playerIndex];
     const drawn = drawFromDeck(room, eff.drawCount);
@@ -224,8 +260,11 @@ function startTurn(room) {
   const player = room.players[room.currentPlayerIndex];
   if (!player) return;
 
-  room.timerSeconds = TURN_SECONDS;
-  io.to(room.code).emit('turnStart', { playerId: player.playerId, seconds: TURN_SECONDS });
+  const turnSeconds = room.rules?.timerSeconds ?? TURN_SECONDS;
+  room.timerSeconds = turnSeconds;
+  io.to(room.code).emit('turnStart', { playerId: player.playerId, seconds: turnSeconds });
+
+  if (turnSeconds <= 0) return; // タイマーなし
 
   room.timerInterval = setInterval(() => {
     room.timerSeconds--;
@@ -236,7 +275,13 @@ function startTurn(room) {
       const p = room.players[room.currentPlayerIndex];
       if (!p) return;
 
-      if (!room.hasDrawnThisTurn) {
+      if (room.drawStackCount > 0) {
+        const count = room.drawStackCount;
+        const drawn = drawFromDeck(room, count);
+        p.hand.push(...drawn);
+        io.to(room.code).emit('playerDrewCards', { playerId: p.playerId, count });
+        room.drawStackCount = 0;
+      } else if (!room.hasDrawnThisTurn) {
         const drawn = drawFromDeck(room, 1);
         if (drawn.length > 0) {
           p.hand.push(...drawn);
@@ -291,7 +336,7 @@ function endRound(room, winnerPlayerId) {
 
   io.to(room.code).emit('roundResult', { winnerId: winnerPlayerId, roundScores, totalScores, hands });
 
-  if (winner.score >= 500) {
+  if (winner.score >= (room.rules?.scoreLimit ?? 500)) {
     room.status = 'gameEnd';
     setTimeout(() => io.to(room.code).emit('gameResult', { winnerId: winnerPlayerId, totalScores }), 3000);
   } else {
@@ -308,10 +353,12 @@ function startRound(room) {
   room.hasDrawnThisTurn = false;
   room.drawnCardUid = null;
   room.currentPlayerIndex = 0;
+  room.drawStackCount = 0;
 
+  const handSize = room.rules?.handSize ?? 7;
   for (const p of room.players) {
     p.hand = [];
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < handSize; i++) {
       if (room.deck.length > 0) p.hand.push(room.deck.pop());
     }
   }
@@ -373,11 +420,17 @@ function getMeta(socket) {
 io.on('connection', (socket) => {
 
   // ── createRoom ──
-  socket.on('createRoom', ({ nickname }) => {
+  socket.on('createRoom', ({ nickname, rules = {} } = {}) => {
     if (!nickname?.trim()) return socket.emit('error', { message: 'ニックネームを入力してください' });
     const code = genCode();
     const playerId = uuidv4();
     const player = { socketId: socket.id, playerId, nickname: nickname.trim(), hand: [], score: 0, connected: true };
+    const roomRules = {
+      handSize: [5, 7].includes(rules.handSize) ? rules.handSize : 7,
+      timerSeconds: [0, 15, 30].includes(rules.timerSeconds) ? rules.timerSeconds : 15,
+      drawStack: rules.drawStack === true,
+      scoreLimit: [300, 500].includes(rules.scoreLimit) ? rules.scoreLimit : 500,
+    };
     rooms.set(code, {
       code, hostPlayerId: playerId, players: [player], status: 'waiting',
       deck: [], discardPile: [], topCard: null, currentColor: null,
@@ -385,11 +438,12 @@ io.on('connection', (socket) => {
       unoState: null, waitingForColor: null,
       hasDrawnThisTurn: false, drawnCardUid: null,
       timerInterval: null, timerSeconds: 0,
+      rules: roomRules, drawStackCount: 0,
       lastActivity: Date.now()
     });
     socketMeta.set(socket.id, { roomCode: code, playerId });
     socket.join(code);
-    socket.emit('roomCreated', { roomCode: code, playerId, players: [{ playerId, nickname: player.nickname, isHost: true, connected: true }] });
+    socket.emit('roomCreated', { roomCode: code, playerId, players: [{ playerId, nickname: player.nickname, isHost: true, connected: true }], rules: roomRules });
   });
 
   // ── joinRoom ──
@@ -621,6 +675,11 @@ io.on('connection', (socket) => {
     const card = player.hand[cardIdx];
     if (!canPlay(card, room.topCard, room.currentColor)) return socket.emit('error', { message: 'そのカードは出せません' });
 
+    // ドロースタック中はドローカードのみ出せる
+    if (room.drawStackCount > 0 && card.type !== 'draw2' && card.type !== 'wild-draw4') {
+      return socket.emit('error', { message: `ドロースタック中です。ドローカードを出すか${room.drawStackCount}枚引いてください` });
+    }
+
     const isLastCard = player.hand.length === 1;
     player.hand.splice(cardIdx, 1);
     room.discardPile.push(card);
@@ -656,7 +715,25 @@ io.on('connection', (socket) => {
     );
     room.direction = newDirection;
 
-    // Apply draw effects (draw2, wild-draw4)
+    // ドロースタックモード: 累積してターン移行（即時引き取らせない）
+    if (room.rules?.drawStack && (card.type === 'draw2' || card.type === 'wild-draw4')) {
+      const addCount = card.type === 'draw2' ? 2 : 4;
+      room.drawStackCount += addCount;
+      if (card.color !== 'wild') room.currentColor = card.color;
+      const stackNext = mod(pIdx + room.direction, room.players.length);
+      if (requiresColorChoice) {
+        room.waitingForColor = { playerId: player.playerId, nextIndex: stackNext };
+        room.currentColor = null;
+        broadcastGameState(room);
+        io.to(room.code).emit('waitingForColor', { playerId: player.playerId });
+        return;
+      }
+      advanceTurn(room, stackNext);
+      broadcastGameState(room);
+      return;
+    }
+
+    // 通常: ドロー効果を即時適用
     for (const eff of effects) {
       const target = room.players[eff.playerIndex];
       const drawn = drawFromDeck(room, eff.drawCount);
@@ -708,6 +785,22 @@ io.on('connection', (socket) => {
     if (room.waitingForColor) return;
 
     const player = room.players[pIdx];
+
+    // ドロースタック: 累積枚数を全部引いてターン終了
+    if (room.drawStackCount > 0) {
+      const count = room.drawStackCount;
+      const drawn = drawFromDeck(room, count);
+      player.hand.push(...drawn);
+      room.drawStackCount = 0;
+      room.lastActivity = Date.now();
+      io.to(room.code).emit('playerDrewCards', { playerId: player.playerId, count });
+      io.to(socket.id).emit('drewCard', { card: drawn[drawn.length - 1], canPlay: false });
+      const next = mod(pIdx + room.direction, room.players.length);
+      advanceTurn(room, next);
+      broadcastGameState(room);
+      return;
+    }
+
     const drawn = drawFromDeck(room, 1);
     if (drawn.length === 0) return;
 

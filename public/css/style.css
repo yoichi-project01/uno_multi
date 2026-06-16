@@ -1129,3 +1129,29 @@ input::placeholder { color: var(--text-muted); }
 }
 .btn-danger:hover { background: #b91c1c; }
 .btn-danger:active { transform: scale(.97); }
+
+/* ── Rules Screen ─────────────────────────────────────────────────────────── */
+#screen-rules { background: #fff; }
+#screen-rules .login-body { gap: 14px; }
+.rule-group { width: 100%; }
+.rule-label {
+  font-size: .8rem; color: #555; font-weight: 600;
+  margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em;
+}
+.rule-options { display: flex; gap: 8px; }
+.rule-opt {
+  flex: 1; padding: 11px 4px;
+  border: 1.5px solid #e5e7eb; background: #fff; color: #374151;
+  border-radius: 10px; font-size: .88rem; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.rule-opt:hover { border-color: #9ca3af; background: #f9fafb; }
+.rule-opt.active { background: #111; color: #fff; border-color: #111; }
+
+/* Draw-stack badge (in-game) */
+.draw-stack-badge {
+  background: #ef4444; color: #fff;
+  font-size: .78rem; font-weight: 700;
+  padding: 4px 12px; border-radius: 20px;
+  text-align: center;
+}
