@@ -1098,6 +1098,16 @@ input::placeholder { color: var(--text-muted); }
 .avatar-option:hover { background: #e5e7eb; transform: scale(1.08); }
 .avatar-option.selected { border-color: #111; background: #f0f0f0; }
 
+/* Logout button override for white background */
+#screen-settings .btn-outline {
+  border-color: rgba(0,0,0,.2);
+  color: #111;
+}
+#screen-settings .btn-outline:hover {
+  border-color: rgba(0,0,0,.4);
+  background: rgba(0,0,0,.05);
+}
+
 /* Danger zone */
 .settings-danger { border: 1.5px solid #fecaca; }
 .danger-title { color: #dc2626 !important; }
