@@ -171,6 +171,8 @@ window.addEventListener('DOMContentLoaded', () => {
     } else {
       openLobby();
     }
+  } else if (myPlayerId && myNickname) {
+    openLobby();
   } else {
     showScreen('top');
   }
