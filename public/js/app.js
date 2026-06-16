@@ -602,7 +602,7 @@ function bindEvents() {
   els.lobbyNicknameInput.addEventListener('keydown', e => { if (e.key === 'Enter') els.btnLobbyCreate.click(); });
 
   // ── Join ──
-  els.btnJoinBack.addEventListener('click', () => showScreen('lobby'));
+  els.btnJoinBack.addEventListener('click', () => showScreen('top'));
 
   els.btnJoinSubmit.addEventListener('click', () => {
     const code = els.joinRoomCodeInput.value.trim();
