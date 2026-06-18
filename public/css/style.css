@@ -1184,7 +1184,7 @@ input::placeholder { color: var(--text-muted); }
 .rule-help-tip {
   position: absolute; bottom: calc(100% + 8px); left: 0;
   transform: translateY(4px);
-  width: 180px; padding: 8px 10px;
+  width: 180px; padding: 8px 10px; white-space: normal;
   background: #111; color: #fff;
   font-size: .72rem; font-weight: 500; line-height: 1.4;
   border-radius: 8px; text-align: left;
