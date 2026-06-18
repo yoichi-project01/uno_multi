@@ -430,6 +430,7 @@ io.on('connection', (socket) => {
       timerSeconds: [0, 15, 30].includes(rules.timerSeconds) ? rules.timerSeconds : 15,
       drawStack: rules.drawStack === true,
       scoreLimit: [300, 500].includes(rules.scoreLimit) ? rules.scoreLimit : 500,
+      maxPlayers: [2, 3, 4].includes(rules.maxPlayers) ? rules.maxPlayers : 4,
     };
     rooms.set(code, {
       code, hostPlayerId: playerId, players: [player], status: 'waiting',
@@ -476,7 +477,8 @@ io.on('connection', (socket) => {
     }
 
     if (room.status !== 'waiting') return socket.emit('error', { message: 'ゲームはすでに始まっています' });
-    if (room.players.length >= 4) return socket.emit('error', { message: '部屋が満員です (最大4人)' });
+    const cap = room.rules?.maxPlayers ?? 4;
+    if (room.players.length >= cap) return socket.emit('error', { message: `部屋が満員です (最大${cap}人)` });
     if (!nickname?.trim()) return socket.emit('error', { message: 'ニックネームを入力してください' });
 
     const playerId = uuidv4();
@@ -486,8 +488,8 @@ io.on('connection', (socket) => {
     socket.join(roomCode);
     room.lastActivity = Date.now();
 
-    socket.emit('roomJoined', { roomCode, playerId, isHost: false });
-    io.to(roomCode).emit('roomUpdate', { players: playerList(room) });
+    socket.emit('roomJoined', { roomCode, playerId, isHost: false, rules: room.rules });
+    io.to(roomCode).emit('roomUpdate', { players: playerList(room), rules: room.rules });
   });
 
   // ── register ──
@@ -629,15 +631,16 @@ io.on('connection', (socket) => {
   });
 
   // ── startGame ──
-  socket.on('startGame', ({ botCount = 0 } = {}) => {
+  socket.on('startGame', () => {
     const room = getRoom(socket);
     const meta = getMeta(socket);
     if (!room || !meta) return;
     if (room.hostPlayerId !== meta.playerId) return socket.emit('error', { message: 'ホストのみ開始できます' });
     if (room.status !== 'waiting') return;
 
-    // 指定数のボットを追加（最大4人まで）
-    const toAdd = Math.min(botCount, 4 - room.players.length);
+    // 参加人数（ルール設定）に達していない場合、不足分を自動でBOTが補充
+    const targetPlayers = room.rules?.maxPlayers ?? 4;
+    const toAdd = Math.max(0, targetPlayers - room.players.length);
     if (toAdd > 0) {
       let botIdx = 0;
       for (let i = 0; i < toAdd; i++) {

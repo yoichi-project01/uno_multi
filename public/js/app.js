@@ -27,7 +27,7 @@ let emoteOpen = false;
 let countdownTimer = null;
 let imageCache = {};
 let pendingLandingEffect = false; // 相手カード着地アニメーション用フラグ
-let currentRules = { handSize: 7, timerSeconds: 15, drawStack: false, scoreLimit: 500 };
+let currentRules = { handSize: 7, timerSeconds: 15, drawStack: false, scoreLimit: 500, maxPlayers: 4 };
 
 // ── DOM Refs ──────────────────────────────────────────────────────────────────
 const screens = { top: $('screen-top'), login: $('screen-login'), lobby: $('screen-lobby'), join: $('screen-join'), rules: $('screen-rules'), waiting: $('screen-waiting'), game: $('screen-game'), roundResult: $('screen-round-result'), gameEnd: $('screen-game-end'), settings: $('screen-settings') };
@@ -59,7 +59,7 @@ const els = {
   waitingPlayers: $('waiting-players'),
   btnStart: $('btn-start'),
   waitingForHost: $('waiting-for-host'),
-  botSelector: $('bot-selector'),
+  waitingHint: $('waiting-hint'),
   opponentsArea: $('opponents-area'),
   btnDraw: $('btn-draw-card'),
   deckCount: $('deck-count'),
@@ -302,25 +302,27 @@ function setupSocket() {
     showScreen('top');
   });
 
-  socket.on('roomCreated', ({ roomCode, playerId, players }) => {
+  socket.on('roomCreated', ({ roomCode, playerId, players, rules }) => {
     saveSession(roomCode, playerId, myNickname);
     isHost = true;
+    updateWaitingHint(rules);
     showWaitingRoom(roomCode, players, true);
   });
 
-  socket.on('roomJoined', ({ roomCode, playerId, isHost: host }) => {
+  socket.on('roomJoined', ({ roomCode, playerId, isHost: host, rules }) => {
     saveSession(roomCode, playerId, myNickname);
     isHost = host;
+    updateWaitingHint(rules);
     // roomUpdate will follow with players list
     showScreen('waiting');
     els.displayCode.textContent = roomCode;
     els.btnStart.classList.toggle('hidden', !host);
     els.waitingForHost.classList.toggle('hidden', host);
-    els.botSelector.classList.toggle('hidden', !host);
     // If reconnecting to an active game, gameState event will fire next
   });
 
-  socket.on('roomUpdate', ({ players }) => {
+  socket.on('roomUpdate', ({ players, rules }) => {
+    if (rules) updateWaitingHint(rules);
     renderWaitingPlayers(players);
     // Update host controls if our host status changed
     const me = players.find(p => p.playerId === myPlayerId);
@@ -328,7 +330,6 @@ function setupSocket() {
       isHost = me.isHost;
       els.btnStart.classList.toggle('hidden', !isHost);
       els.waitingForHost.classList.toggle('hidden', isHost);
-      els.botSelector.classList.toggle('hidden', !isHost);
     }
   });
 
@@ -491,7 +492,6 @@ function setupSocket() {
       showScreen('waiting');
       els.btnStart.classList.toggle('hidden', !isHost);
       els.waitingForHost.classList.toggle('hidden', isHost);
-      els.botSelector.classList.toggle('hidden', !isHost);
     }, 3000);
   });
 
@@ -601,6 +601,7 @@ function bindEvents() {
       else if (rule === 'timerSeconds') currentRules.timerSeconds = parseInt(val);
       else if (rule === 'drawStack') currentRules.drawStack = val === 'true';
       else if (rule === 'scoreLimit') currentRules.scoreLimit = parseInt(val);
+      else if (rule === 'maxPlayers') currentRules.maxPlayers = parseInt(val);
       document.querySelectorAll(`.rule-opt[data-rule="${rule}"]`).forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     });
@@ -745,18 +746,8 @@ function bindEvents() {
     navigator.clipboard.writeText(url).then(() => showToast('URLをコピーしました！', 1500));
   });
 
-  // ボット数ボタンのトグル
-  document.querySelectorAll('.bot-count-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.bot-count-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-    });
-  });
-
   els.btnStart.addEventListener('click', () => {
-    const activeBtn = document.querySelector('.bot-count-btn.active');
-    const botCount = activeBtn ? parseInt(activeBtn.dataset.count, 10) : 0;
-    socket.emit('startGame', { botCount });
+    socket.emit('startGame');
   });
 
   els.btnDraw.addEventListener('click', () => {
@@ -828,6 +819,11 @@ function bindEvents() {
 }
 
 // ── Render: Waiting Room ──────────────────────────────────────────────────────
+function updateWaitingHint(rules) {
+  const max = rules?.maxPlayers ?? 4;
+  els.waitingHint.textContent = `目標人数: ${max}人（不足時はBOTが自動参加します）`;
+}
+
 function showWaitingRoom(roomCode, players, host) {
   myRoomCode = roomCode;
   isHost = host;
@@ -835,7 +831,6 @@ function showWaitingRoom(roomCode, players, host) {
   els.displayCode.textContent = roomCode;
   els.btnStart.classList.toggle('hidden', !host);
   els.waitingForHost.classList.toggle('hidden', host);
-  els.botSelector.classList.toggle('hidden', !host);
   renderWaitingPlayers(players);
 }
 

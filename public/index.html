@@ -171,6 +171,16 @@
           <button class="rule-opt" data-rule="scoreLimit" data-value="300">300点</button>
         </div>
       </div>
+      <div class="lobby-rule-row">
+        <span class="lobby-rule-label">参加人数
+          <span class="rule-help" tabindex="0">?<span class="rule-help-tip">この人数に達していない状態でゲームを開始すると、不足分はコンピューター(BOT)が自動で参加します。</span></span>
+        </span>
+        <div class="rule-options">
+          <button class="rule-opt" data-rule="maxPlayers" data-value="2">2人</button>
+          <button class="rule-opt" data-rule="maxPlayers" data-value="3">3人</button>
+          <button class="rule-opt active" data-rule="maxPlayers" data-value="4">4人</button>
+        </div>
+      </div>
     </div>
     <button id="btn-lobby-create" class="btn auth-submit-btn">部屋を作る</button>
   </div>
@@ -255,16 +265,7 @@
   <button id="btn-copy-url" class="btn btn-outline btn-small">🔗 URLをコピー</button>
   <div id="waiting-players" class="waiting-players"></div>
   <div class="waiting-footer">
-    <p class="waiting-hint">2〜4人でプレイできます</p>
-    <div id="bot-selector" class="bot-selector hidden">
-      <label class="bot-selector-label">BOTを追加</label>
-      <div class="bot-count-btns">
-        <button class="bot-count-btn active" data-count="0">0</button>
-        <button class="bot-count-btn" data-count="1">1</button>
-        <button class="bot-count-btn" data-count="2">2</button>
-        <button class="bot-count-btn" data-count="3">3</button>
-      </div>
-    </div>
+    <p id="waiting-hint" class="waiting-hint">2〜4人でプレイできます</p>
     <button id="btn-start" class="btn btn-primary btn-large hidden">ゲームを開始する</button>
     <p id="waiting-for-host" class="hint-text">ホストがゲームを開始するのを待っています...</p>
   </div>
