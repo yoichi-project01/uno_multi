@@ -96,9 +96,10 @@ const els = {
   lobbyNicknameInput: $('lobby-nickname-input'),
   lobbyError: $('lobby-error'),
   btnLobbyCreate: $('btn-lobby-create'),
-  btnGotoJoin: $('btn-goto-join'),
   // Join screen
   btnJoinBack: $('btn-join-back'),
+  joinNicknameGroup: $('join-nickname-group'),
+  joinNicknameInput: $('join-nickname-input'),
   joinRoomCodeInput: $('join-room-code-input'),
   joinError: $('join-error'),
   btnJoinSubmit: $('btn-join-submit'),
@@ -172,11 +173,9 @@ window.addEventListener('DOMContentLoaded', () => {
   const roomFromUrl = window.location.pathname.match(/^\/room\/(\d{4})$/);
   if (roomFromUrl) {
     els.joinRoomCodeInput.value = roomFromUrl[1];
-    if (myPlayerId && myNickname) {
-      showScreen('join');
-    } else {
-      openLobby();
-    }
+    const loggedIn = myPlayerId && myNickname;
+    els.joinNicknameGroup.classList.toggle('hidden', !!loggedIn);
+    showScreen('join');
   } else {
     showScreen('top');
   }
@@ -564,11 +563,12 @@ function bindEvents() {
     openLobby();
   });
   els.btnJoinLink.addEventListener('click', () => {
-    if (myPlayerId && myNickname) {
-      showScreen('join');
-    } else {
-      openLobby();
-    }
+    const loggedIn = myPlayerId && myNickname;
+    els.joinNicknameGroup.classList.toggle('hidden', !!loggedIn);
+    if (!loggedIn) els.joinNicknameInput.value = '';
+    els.joinError.classList.add('hidden');
+    els.joinRoomCodeInput.value = '';
+    showScreen('join');
   });
   els.btnLoginLink.addEventListener('click', () => showScreen('login'));
   els.btnLoginBack.addEventListener('click', () => showScreen('top'));
@@ -608,41 +608,31 @@ function bindEvents() {
     socket.emit('createRoom', { nickname: myNickname, rules: currentRules });
   });
 
-  els.btnGotoJoin.addEventListener('click', () => {
-    if (!myPlayerId) {
-      const nick = els.lobbyNicknameInput.value.trim();
-      if (!nick) {
-        els.lobbyError.textContent = 'ニックネームを入力してください';
-        els.lobbyError.classList.remove('hidden');
-        return;
-      }
-      myNickname = nick;
-    }
-    els.lobbyError.classList.add('hidden');
-    els.joinError.classList.add('hidden');
-    els.joinRoomCodeInput.value = '';
-    showScreen('join');
-  });
-
   els.lobbyNicknameInput.addEventListener('keydown', e => { if (e.key === 'Enter') els.btnLobbyCreate.click(); });
 
   // ── Join ──
   els.btnJoinBack.addEventListener('click', () => showScreen('top'));
 
   els.btnJoinSubmit.addEventListener('click', () => {
+    const nick = myPlayerId ? myNickname : els.joinNicknameInput.value.trim();
+    if (!nick) {
+      els.joinError.textContent = 'ニックネームを入力してください';
+      els.joinError.classList.remove('hidden');
+      return;
+    }
     const code = els.joinRoomCodeInput.value.trim();
     if (!/^\d{4}$/.test(code)) {
       els.joinError.textContent = '4桁のルームコードを入力してください';
       els.joinError.classList.remove('hidden');
       return;
     }
-    const nick = myPlayerId ? myNickname : myNickname;
-    if (!nick) { showScreen('lobby'); return; }
+    myNickname = nick;
     els.joinError.classList.add('hidden');
     socket.emit('joinRoom', { roomCode: code, nickname: nick });
   });
 
   els.joinRoomCodeInput.addEventListener('keydown', e => { if (e.key === 'Enter') els.btnJoinSubmit.click(); });
+  els.joinNicknameInput.addEventListener('keydown', e => { if (e.key === 'Enter') els.btnJoinSubmit.click(); });
 
   // ── Settings ──
   els.btnSettings.addEventListener('click', openSettings);
