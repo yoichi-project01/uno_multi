@@ -186,11 +186,13 @@ function setupSocket() {
   socket = io();
 
   socket.on('connect', () => {
+    if (myPlayerId) {
+      // ソケット再接続ごとにサーバー側セッション(sessions Map)を復元
+      // これがないと設定変更(アイコン/ユーザー名/パスワード等)が「ログインが必要です」で失敗する
+      socket.emit('restoreSession', { playerId: myPlayerId });
+    }
     if (myPlayerId && myRoomCode) {
       socket.emit('joinRoom', { roomCode: myRoomCode, nickname: myNickname || '', playerId: myPlayerId });
-    } else if (myPlayerId && !myNickname) {
-      // nicknameがlocalStorageにない場合、サーバーから取得
-      socket.emit('restoreSession', { playerId: myPlayerId });
     }
   });
 
