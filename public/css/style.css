@@ -1140,7 +1140,7 @@ input::placeholder { color: var(--text-muted); }
 }
 .rule-options { display: flex; gap: 6px; }
 .rule-opt {
-  flex: 1; padding: 8px 4px;
+  flex: 1; padding: 8px 4px; white-space: nowrap;
   border: 1.5px solid #e5e7eb; background: #fff; color: #374151;
   border-radius: 8px; font-size: .82rem; font-weight: 600;
   cursor: pointer; transition: all .15s;
@@ -1167,6 +1167,9 @@ input::placeholder { color: var(--text-muted); }
   width: 72px; flex-shrink: 0; white-space: nowrap;
   display: flex; align-items: center; gap: 4px;
 }
+.lobby-rule-row .rule-opt {
+  padding: 7px 2px; font-size: .74rem;
+}
 
 /* Rule help tooltip */
 .rule-help {
@@ -1179,9 +1182,9 @@ input::placeholder { color: var(--text-muted); }
 }
 .rule-help:hover, .rule-help:focus { background: #9ca3af; outline: none; }
 .rule-help-tip {
-  position: absolute; bottom: calc(100% + 8px); left: 50%;
-  transform: translateX(-50%) translateY(4px);
-  width: 200px; padding: 8px 10px;
+  position: absolute; bottom: calc(100% + 8px); left: 0;
+  transform: translateY(4px);
+  width: 180px; padding: 8px 10px;
   background: #111; color: #fff;
   font-size: .72rem; font-weight: 500; line-height: 1.4;
   border-radius: 8px; text-align: left;
@@ -1190,13 +1193,12 @@ input::placeholder { color: var(--text-muted); }
   z-index: 20;
 }
 .rule-help-tip::after {
-  content: ''; position: absolute; top: 100%; left: 50%;
-  transform: translateX(-50%);
+  content: ''; position: absolute; top: 100%; left: 7px;
   border: 5px solid transparent; border-top-color: #111;
 }
 .rule-help:hover .rule-help-tip,
 .rule-help:focus .rule-help-tip {
-  opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0);
+  opacity: 1; visibility: visible; transform: translateY(0);
 }
 
 /* Draw-stack badge (in-game) */
