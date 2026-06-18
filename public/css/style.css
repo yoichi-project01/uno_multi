@@ -665,6 +665,8 @@ input::placeholder { color: var(--text-muted); }
 .avatar-1 { background: #3b82f6; }
 .avatar-2 { background: #22c55e; }
 .avatar-3 { background: #eab308; }
+.avatar-4 { background: #a855f7; }
+.avatar-5 { background: #ec4899; }
 
 /* ── Card Play Animations ────────────────────────────────────────────────────── */
 @keyframes cardLand {
@@ -1151,6 +1153,8 @@ input::placeholder { color: var(--text-muted); }
 }
 .lobby-rule-row .rule-opt:hover { border-color: rgba(255,255,255,.3); background: rgba(255,255,255,.06); }
 .lobby-rule-row .rule-opt.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.lobby-rule-row .rule-options:has(.rule-opt:nth-child(5)) { gap: 4px; }
+.lobby-rule-row .rule-options:has(.rule-opt:nth-child(5)) .rule-opt { padding: 7px 1px; font-size: .68rem; }
 .lobby-rules .rule-help-tip { background: var(--bg-panel); }
 .lobby-rules .rule-help-tip::after { border-top-color: var(--bg-panel); }
 

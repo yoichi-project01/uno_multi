@@ -17,7 +17,7 @@ const io = new Server(httpServer);
 
 const PORT = process.env.PORT || 3000;
 const TURN_SECONDS = 15;
-const BOT_NAMES = ['Bot Alice', 'Bot Bob', 'Bot Carol'];
+const BOT_NAMES = ['Bot Alice', 'Bot Bob', 'Bot Carol', 'Bot Dave', 'Bot Eve'];
 const VALID_AVATARS = ['🎮','🎯','🃏','🎲','⭐','🔥','💎','🌟','👑','🐉','🦊','🐺'];
 
 // Map<roomCode, roomState>
@@ -430,7 +430,7 @@ io.on('connection', (socket) => {
       timerSeconds: [0, 15, 30].includes(rules.timerSeconds) ? rules.timerSeconds : 15,
       drawStack: rules.drawStack === true,
       scoreLimit: [300, 500].includes(rules.scoreLimit) ? rules.scoreLimit : 500,
-      maxPlayers: [2, 3, 4].includes(rules.maxPlayers) ? rules.maxPlayers : 4,
+      maxPlayers: [2, 3, 4, 5, 6].includes(rules.maxPlayers) ? rules.maxPlayers : 4,
     };
     rooms.set(code, {
       code, hostPlayerId: playerId, players: [player], status: 'waiting',
