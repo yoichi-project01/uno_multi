@@ -42,7 +42,7 @@ html, body {
 
 /* ── Top Screen (splash) ──────────────────────────────────────────────────── */
 #screen-top {
-  background: #fff;
+  background: var(--bg);
   justify-content: space-between;
   align-items: center;
   padding: 0;
@@ -61,13 +61,13 @@ html, body {
   font-size: clamp(5.5rem, 22vw, 10rem);
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: #111;
+  color: var(--text);
   line-height: 1;
 }
 
 .splash-tagline {
   font-size: clamp(0.75rem, 2vw, 0.9rem);
-  color: #aaa;
+  color: var(--text-sub);
   letter-spacing: 0.2em;
   text-transform: uppercase;
 }
@@ -86,7 +86,7 @@ html, body {
   max-width: 320px;
   text-align: center;
   font-size: 1rem;
-  color: #111;
+  color: var(--text);
   cursor: pointer;
   letter-spacing: 0.02em;
   text-decoration: none;
@@ -94,24 +94,24 @@ html, body {
   transition: opacity .2s, background .2s;
   border-radius: 12px;
 }
-.splash-link:hover { background: rgba(0,0,0,.05); }
+.splash-link:hover { background: rgba(255,255,255,.07); }
 .splash-link:active { opacity: 0.5; }
 
 .splash-link.primary {
-  background: #111;
+  background: var(--accent);
   color: #fff;
   font-weight: 600;
   margin-bottom: 12px;
 }
-.splash-link.primary:hover { background: #333; }
+.splash-link.primary:hover { background: #dc2626; }
 
 .splash-link.splash-link-sub {
   font-size: .85rem;
-  color: #aaa;
+  color: var(--text-sub);
   padding: 10px 24px;
   margin-top: 4px;
 }
-.splash-link.splash-link-sub:hover { background: transparent; color: #555; }
+.splash-link.splash-link-sub:hover { background: transparent; color: var(--text); }
 
 /* ── Guest entry bottom sheet ─────────────────────────────────────────────── */
 .guest-sheet {
@@ -1017,7 +1017,7 @@ input::placeholder { color: var(--text-muted); }
   position: absolute;
   top: 20px; right: 16px;
   display: flex; align-items: center; gap: 8px;
-  background: rgba(0,0,0,.07);
+  background: rgba(255,255,255,.08);
   border-radius: 40px;
   padding: 6px 10px 6px 6px;
   z-index: 10;
@@ -1030,16 +1030,16 @@ input::placeholder { color: var(--text-muted); }
   font-size: 1.1rem; font-weight: 700; flex-shrink: 0;
 }
 .user-chip-name {
-  font-size: .9rem; font-weight: 600; color: #111; max-width: 100px;
+  font-size: .9rem; font-weight: 600; color: var(--text); max-width: 100px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .user-chip-settings {
-  background: rgba(0,0,0,.08); border: none; cursor: pointer;
-  color: #111; padding: 6px; border-radius: 50%;
+  background: rgba(255,255,255,.1); border: none; cursor: pointer;
+  color: var(--text); padding: 6px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   transition: background .15s;
 }
-.user-chip-settings:hover { background: rgba(0,0,0,.18); }
+.user-chip-settings:hover { background: rgba(255,255,255,.2); }
 .user-chip-settings svg { width: 20px; height: 20px; }
 
 /* ── Settings Screen ──────────────────────────────────────────────────────── */
