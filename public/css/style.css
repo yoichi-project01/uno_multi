@@ -1012,7 +1012,7 @@ input::placeholder { color: var(--text-muted); }
 
 /* ── Settings Screen ──────────────────────────────────────────────────────── */
 .settings-screen {
-  background: #f5f5f7;
+  background: var(--bg);
   overflow: hidden;
   align-items: stretch;
   justify-content: flex-start;
@@ -1021,32 +1021,32 @@ input::placeholder { color: var(--text-muted); }
 .settings-header {
   display: flex; align-items: center; gap: 12px;
   padding: 52px 20px 0;
-  background: #f5f5f7;
+  background: var(--bg);
   flex-shrink: 0;
 }
 .settings-back-btn {
   background: none; border: none; cursor: pointer;
-  color: #333; padding: 4px; display: flex; align-items: center; justify-content: center;
+  color: var(--text); padding: 4px; display: flex; align-items: center; justify-content: center;
   transition: color .15s;
 }
-.settings-back-btn:hover { color: #000; }
-.settings-header-title { font-size: 1.1rem; font-weight: 700; color: #111; }
+.settings-back-btn:hover { color: #fff; }
+.settings-header-title { font-size: 1.1rem; font-weight: 700; color: var(--text); }
 
 /* タブバー */
 .settings-tabs {
   display: flex; gap: 0;
   padding: 16px 16px 0;
-  border-bottom: 1.5px solid #e5e7eb;
-  background: #f5f5f7;
+  border-bottom: 1.5px solid rgba(255,255,255,.1);
+  background: var(--bg);
   flex-shrink: 0;
   max-width: 480px; width: 100%; margin: 0 auto;
 }
 .settings-tab {
   flex: 1; background: none; border: none; border-bottom: 2.5px solid transparent;
   margin-bottom: -1.5px; padding: 10px 4px; font-size: .88rem; font-weight: 600;
-  color: #9ca3af; cursor: pointer; transition: color .2s, border-color .2s;
+  color: var(--text-sub); cursor: pointer; transition: color .2s, border-color .2s;
 }
-.settings-tab.active { color: #111; border-bottom-color: #111; }
+.settings-tab.active { color: var(--text); border-bottom-color: var(--accent); }
 
 /* タブパネル */
 .settings-body {
@@ -1058,22 +1058,22 @@ input::placeholder { color: var(--text-muted); }
 .settings-tab-panel.active { display: flex; }
 
 .settings-form { display: flex; flex-direction: column; gap: 12px; }
-.settings-form .form-group label { color: #555; }
+.settings-form .form-group label { color: var(--text-sub); }
 .settings-form input {
-  background: #fff; border: 1.5px solid #e5e7eb; border-radius: 12px;
-  color: #111; font-size: 1rem; padding: 13px 16px; outline: none;
+  background: var(--bg-panel); border: 1.5px solid rgba(255,255,255,.12); border-radius: 12px;
+  color: var(--text); font-size: 1rem; padding: 13px 16px; outline: none;
   transition: border-color .2s, box-shadow .2s; width: 100%;
 }
-.settings-form input:focus { border-color: #111; box-shadow: 0 0 0 3px rgba(17,17,17,.08); }
-.settings-form input::placeholder { color: #d1d5db; }
+.settings-form input:focus { border-color: var(--text); box-shadow: 0 0 0 3px rgba(255,255,255,.08); }
+.settings-form input::placeholder { color: var(--text-muted); }
 
 .settings-btn { width: 100%; }
 
 .settings-msg {
   font-size: .85rem; padding: 8px 12px; border-radius: 8px;
 }
-.settings-msg.success { background: #d1fae5; color: #065f46; }
-.settings-msg.error   { background: #fee2e2; color: #991b1b; }
+.settings-msg.success { background: rgba(34,197,94,.15); border: 1px solid rgba(34,197,94,.35); color: #86efac; }
+.settings-msg.error   { background: rgba(239,68,68,.15); border: 1px solid rgba(239,68,68,.35); color: #fca5a5; }
 .settings-msg.hidden  { display: none; }
 
 /* Avatar grid */
@@ -1082,25 +1082,25 @@ input::placeholder { color: var(--text-muted); }
 }
 .avatar-option {
   aspect-ratio: 1; border-radius: 12px; border: 2px solid transparent;
-  background: #fff; font-size: 1.5rem; cursor: pointer;
+  background: var(--bg-panel); font-size: 1.5rem; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: border-color .15s, background .15s, transform .1s;
 }
-.avatar-option:hover { background: #e5e7eb; transform: scale(1.08); }
-.avatar-option.selected { border-color: #111; background: #f0f0f0; }
+.avatar-option:hover { background: rgba(255,255,255,.12); transform: scale(1.08); }
+.avatar-option.selected { border-color: var(--accent); background: rgba(239,68,68,.15); }
 
 /* Account tab */
-.settings-divider { height: 1px; background: #e5e7eb; margin: 4px 0; }
+.settings-divider { height: 1px; background: rgba(255,255,255,.1); margin: 4px 0; }
 .settings-danger-label {
-  font-size: .82rem; color: #dc2626; font-weight: 500;
+  font-size: .82rem; color: #fca5a5; font-weight: 500;
 }
 
 /* Logout / danger buttons */
 #screen-settings .btn-outline {
-  border-color: rgba(0,0,0,.2); color: #111;
+  border-color: rgba(255,255,255,.2); color: var(--text);
 }
 #screen-settings .btn-outline:hover {
-  border-color: rgba(0,0,0,.4); background: rgba(0,0,0,.05);
+  border-color: rgba(255,255,255,.4); background: rgba(255,255,255,.05);
 }
 .btn-danger {
   background: #dc2626; color: #fff; border: none; border-radius: 10px;
