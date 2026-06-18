@@ -757,16 +757,27 @@ input::placeholder { color: var(--text-muted); }
 .hand-card.just-selected { animation: selectPop 0.25s ease forwards; }
 
 /* ── Login / Lobby / Join Screens ─────────────────────────────────────────── */
-#screen-login, #screen-lobby, #screen-join {
+#screen-login, #screen-join {
   background: #fff;
   justify-content: flex-start;
   align-items: center;
   overflow-y: auto;
 }
 
+/* ロビー画面は待機室/ゲーム画面と同じダークテーマに統一 */
+#screen-lobby {
+  background: var(--bg);
+  justify-content: flex-start;
+  align-items: center;
+  overflow-y: auto;
+}
+#screen-lobby .login-back-btn { color: var(--text); }
+#screen-lobby .login-back-btn:hover { background: rgba(255,255,255,.08); }
+#screen-lobby .login-header-logo { color: var(--text); }
+
 .lobby-user-card {
   display: flex; align-items: center; gap: 14px;
-  background: #f5f5f7; border-radius: 16px; padding: 16px 18px;
+  background: var(--bg-card); border-radius: 16px; padding: 16px 18px;
   width: 100%;
 }
 .lobby-user-card.hidden { display: none; }
@@ -776,8 +787,8 @@ input::placeholder { color: var(--text-muted); }
   display: flex; align-items: center; justify-content: center;
   font-size: 1.4rem; font-weight: 700; flex-shrink: 0;
 }
-.lobby-username-text { font-weight: 700; font-size: 1.05rem; color: #111; margin-bottom: 2px; }
-.lobby-logged-label { font-size: .78rem; color: #888; }
+.lobby-username-text { font-weight: 700; font-size: 1.05rem; color: var(--text); margin-bottom: 2px; }
+.lobby-logged-label { font-size: .78rem; color: var(--text-sub); }
 
 .login-header {
   display: flex;
@@ -858,11 +869,9 @@ input::placeholder { color: var(--text-muted); }
 }
 
 #screen-login .form-group,
-#screen-lobby .form-group,
 #screen-join .form-group { gap: 7px; }
 
 #screen-login .form-group label,
-#screen-lobby .form-group label,
 #screen-join .form-group label {
   font-size: .8rem;
   color: #6b7280;
@@ -872,7 +881,6 @@ input::placeholder { color: var(--text-muted); }
 }
 
 #screen-login input,
-#screen-lobby input,
 #screen-join input {
   background: #f9fafb;
   border: 1.5px solid #e5e7eb;
@@ -885,31 +893,27 @@ input::placeholder { color: var(--text-muted); }
   width: 100%;
 }
 #screen-login input:focus,
-#screen-lobby input:focus,
 #screen-join input:focus {
   border-color: #111;
   background: #fff;
   box-shadow: 0 0 0 3px rgba(17,17,17,.08);
 }
 #screen-login input::placeholder,
-#screen-lobby input::placeholder,
 #screen-join input::placeholder { color: #d1d5db; }
 
-#screen-lobby .btn-outline,
+/* ロビーは#screen-lobby専用スコープがないためベースのダーク用 .form-group/input にフォールバック */
+#screen-lobby .form-group { gap: 7px; }
+
 #screen-join .btn-outline {
   border-color: rgba(0,0,0,.18);
   color: #111;
 }
-#screen-lobby .btn-outline:hover,
 #screen-join .btn-outline:hover {
   border-color: rgba(0,0,0,.35);
   background: rgba(0,0,0,.04);
 }
 
-#screen-lobby .divider,
 #screen-join .divider { color: #9ca3af; }
-#screen-lobby .divider::before,
-#screen-lobby .divider::after,
 #screen-join .divider::before,
 #screen-join .divider::after { background: #e5e7eb; }
 
@@ -963,6 +967,14 @@ input::placeholder { color: var(--text-muted); }
   background: #d1d5db;
   cursor: not-allowed;
 }
+
+#screen-lobby .auth-error {
+  background: rgba(239,68,68,.15);
+  border: 1px solid rgba(239,68,68,.35);
+  color: #fca5a5;
+}
+#screen-lobby .auth-submit-btn { background: var(--accent); }
+#screen-lobby .auth-submit-btn:hover { background: #dc2626; }
 
 /* Auth success banner in guest sheet */
 .auth-user-banner {
@@ -1151,25 +1163,30 @@ input::placeholder { color: var(--text-muted); }
 /* ── Lobby inline rules ───────────────────────────────────────────────────── */
 .lobby-rules {
   width: 100%;
-  background: #f9fafb; border: 1.5px solid #e5e7eb;
+  background: var(--bg-card); border: 1.5px solid rgba(255,255,255,.08);
   border-radius: 12px; padding: 12px 14px;
   display: flex; flex-direction: column; gap: 8px;
 }
 .lobby-rules-title {
-  font-size: .72rem; font-weight: 700; color: #9ca3af;
+  font-size: .72rem; font-weight: 700; color: var(--text-sub);
   text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px;
 }
 .lobby-rule-row {
   display: flex; align-items: center; gap: 10px;
 }
 .lobby-rule-label {
-  font-size: .78rem; color: #555; font-weight: 600;
+  font-size: .78rem; color: var(--text-sub); font-weight: 600;
   width: 72px; flex-shrink: 0; white-space: nowrap;
   display: flex; align-items: center; justify-content: space-between;
 }
 .lobby-rule-row .rule-opt {
   padding: 7px 2px; font-size: .74rem;
+  background: var(--bg-panel); border: 1.5px solid rgba(255,255,255,.12); color: var(--text);
 }
+.lobby-rule-row .rule-opt:hover { border-color: rgba(255,255,255,.3); background: rgba(255,255,255,.06); }
+.lobby-rule-row .rule-opt.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.lobby-rules .rule-help-tip { background: var(--bg-panel); }
+.lobby-rules .rule-help-tip::after { border-top-color: var(--bg-panel); }
 
 /* Rule help tooltip */
 .rule-help {
