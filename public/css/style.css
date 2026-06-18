@@ -1164,7 +1164,7 @@ input::placeholder { color: var(--text-muted); }
 }
 .lobby-rule-label {
   font-size: .78rem; color: #555; font-weight: 600;
-  width: 64px; flex-shrink: 0;
+  width: 72px; flex-shrink: 0; white-space: nowrap;
   display: flex; align-items: center; gap: 4px;
 }
 
