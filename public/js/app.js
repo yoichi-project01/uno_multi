@@ -192,7 +192,7 @@ function setupSocket() {
       socket.emit('restoreSession', { playerId: myPlayerId });
     }
     if (myPlayerId && myRoomCode) {
-      socket.emit('joinRoom', { roomCode: myRoomCode, nickname: myNickname || '', playerId: myPlayerId });
+      socket.emit('joinRoom', { roomCode: myRoomCode, nickname: myNickname || '', avatar: myAvatar, playerId: myPlayerId });
     }
   });
 
@@ -587,7 +587,7 @@ function bindEvents() {
     }
     myNickname = nick;
     els.lobbyError.classList.add('hidden');
-    socket.emit('createRoom', { nickname: nick, rules: currentRules });
+    socket.emit('createRoom', { nickname: nick, avatar: myAvatar, rules: currentRules });
   });
 
   // ── Rules ──
@@ -608,7 +608,7 @@ function bindEvents() {
   });
 
   els.btnRulesCreate.addEventListener('click', () => {
-    socket.emit('createRoom', { nickname: myNickname, rules: currentRules });
+    socket.emit('createRoom', { nickname: myNickname, avatar: myAvatar, rules: currentRules });
   });
 
   els.lobbyNicknameInput.addEventListener('keydown', e => { if (e.key === 'Enter') els.btnLobbyCreate.click(); });
@@ -631,7 +631,7 @@ function bindEvents() {
     }
     myNickname = nick;
     els.joinError.classList.add('hidden');
-    socket.emit('joinRoom', { roomCode: code, nickname: nick });
+    socket.emit('joinRoom', { roomCode: code, nickname: nick, avatar: myAvatar });
   });
 
   els.joinRoomCodeInput.addEventListener('keydown', e => { if (e.key === 'Enter') els.btnJoinSubmit.click(); });
@@ -806,7 +806,7 @@ function bindEvents() {
   els.btnBackLobby.addEventListener('click', () => {
     // Rejoin the waiting room
     if (myRoomCode && myPlayerId) {
-      socket.emit('joinRoom', { roomCode: myRoomCode, nickname: myNickname, playerId: myPlayerId });
+      socket.emit('joinRoom', { roomCode: myRoomCode, nickname: myNickname, avatar: myAvatar, playerId: myPlayerId });
     } else {
       showScreen('top');
     }
@@ -839,8 +839,9 @@ function renderWaitingPlayers(players) {
   players.forEach((p, i) => {
     const div = document.createElement('div');
     div.className = `waiting-player ${p.connected === false ? 'disconnected' : ''}`;
+    const avatarContent = p.avatar || p.nickname.charAt(0).toUpperCase();
     div.innerHTML = `
-      <div class="player-avatar avatar-${i}">${p.nickname.charAt(0).toUpperCase()}</div>
+      <div class="player-avatar avatar-${i}">${avatarContent}</div>
       <span class="player-name">${escHtml(p.nickname)}${p.playerId === myPlayerId ? ' (あなた)' : ''}</span>
       ${p.isHost ? '<span class="host-badge">HOST</span>' : ''}
       ${p.connected === false ? '<span style="color:var(--text-muted);font-size:.8rem">切断中</span>' : ''}

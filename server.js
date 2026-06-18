@@ -66,6 +66,7 @@ function playerList(room) {
   return room.players.map(p => ({
     playerId: p.playerId,
     nickname: p.nickname,
+    avatar: p.avatar || null,
     cardCount: p.hand.length,
     score: p.score,
     connected: p.connected,
@@ -420,11 +421,12 @@ function getMeta(socket) {
 io.on('connection', (socket) => {
 
   // ── createRoom ──
-  socket.on('createRoom', ({ nickname, rules = {} } = {}) => {
+  socket.on('createRoom', ({ nickname, avatar, rules = {} } = {}) => {
     if (!nickname?.trim()) return socket.emit('error', { message: 'ニックネームを入力してください' });
     const code = genCode();
     const playerId = uuidv4();
-    const player = { socketId: socket.id, playerId, nickname: nickname.trim(), hand: [], score: 0, connected: true };
+    const playerAvatar = VALID_AVATARS.includes(avatar) ? avatar : null;
+    const player = { socketId: socket.id, playerId, nickname: nickname.trim(), avatar: playerAvatar, hand: [], score: 0, connected: true };
     const roomRules = {
       handSize: [5, 7].includes(rules.handSize) ? rules.handSize : 7,
       timerSeconds: [0, 15, 30].includes(rules.timerSeconds) ? rules.timerSeconds : 15,
@@ -444,11 +446,11 @@ io.on('connection', (socket) => {
     });
     socketMeta.set(socket.id, { roomCode: code, playerId });
     socket.join(code);
-    socket.emit('roomCreated', { roomCode: code, playerId, players: [{ playerId, nickname: player.nickname, isHost: true, connected: true }], rules: roomRules });
+    socket.emit('roomCreated', { roomCode: code, playerId, players: [{ playerId, nickname: player.nickname, avatar: playerAvatar, isHost: true, connected: true }], rules: roomRules });
   });
 
   // ── joinRoom ──
-  socket.on('joinRoom', ({ roomCode, nickname, playerId: existingId }) => {
+  socket.on('joinRoom', ({ roomCode, nickname, avatar, playerId: existingId }) => {
     const room = rooms.get(roomCode);
     if (!room) return socket.emit('error', { message: '部屋が見つかりません (コード: ' + roomCode + ')' });
 
@@ -482,7 +484,8 @@ io.on('connection', (socket) => {
     if (!nickname?.trim()) return socket.emit('error', { message: 'ニックネームを入力してください' });
 
     const playerId = uuidv4();
-    const player = { socketId: socket.id, playerId, nickname: nickname.trim(), hand: [], score: 0, connected: true };
+    const playerAvatar = VALID_AVATARS.includes(avatar) ? avatar : null;
+    const player = { socketId: socket.id, playerId, nickname: nickname.trim(), avatar: playerAvatar, hand: [], score: 0, connected: true };
     room.players.push(player);
     socketMeta.set(socket.id, { roomCode, playerId });
     socket.join(roomCode);
