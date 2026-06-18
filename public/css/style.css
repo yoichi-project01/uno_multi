@@ -1165,7 +1165,7 @@ input::placeholder { color: var(--text-muted); }
 .lobby-rule-label {
   font-size: .78rem; color: #555; font-weight: 600;
   width: 72px; flex-shrink: 0; white-space: nowrap;
-  display: flex; align-items: center; gap: 4px;
+  display: flex; align-items: center; justify-content: space-between;
 }
 .lobby-rule-row .rule-opt {
   padding: 7px 2px; font-size: .74rem;
