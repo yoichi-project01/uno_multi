@@ -1164,7 +1164,39 @@ input::placeholder { color: var(--text-muted); }
 }
 .lobby-rule-label {
   font-size: .78rem; color: #555; font-weight: 600;
-  width: 52px; flex-shrink: 0;
+  width: 64px; flex-shrink: 0;
+  display: flex; align-items: center; gap: 4px;
+}
+
+/* Rule help tooltip */
+.rule-help {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #d1d5db; color: #fff;
+  font-size: .62rem; font-weight: 700;
+  cursor: help; flex-shrink: 0; line-height: 1;
+}
+.rule-help:hover, .rule-help:focus { background: #9ca3af; outline: none; }
+.rule-help-tip {
+  position: absolute; bottom: calc(100% + 8px); left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  width: 200px; padding: 8px 10px;
+  background: #111; color: #fff;
+  font-size: .72rem; font-weight: 500; line-height: 1.4;
+  border-radius: 8px; text-align: left;
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity .15s, transform .15s;
+  z-index: 20;
+}
+.rule-help-tip::after {
+  content: ''; position: absolute; top: 100%; left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: #111;
+}
+.rule-help:hover .rule-help-tip,
+.rule-help:focus .rule-help-tip {
+  opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0);
 }
 
 /* Draw-stack badge (in-game) */

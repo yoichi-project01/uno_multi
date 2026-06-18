@@ -135,14 +135,18 @@
     <div class="lobby-rules">
       <div class="lobby-rules-title">ルール設定</div>
       <div class="lobby-rule-row">
-        <span class="lobby-rule-label">初期手札</span>
+        <span class="lobby-rule-label">初期手札
+          <span class="rule-help" tabindex="0">?<span class="rule-help-tip">各プレイヤーが最初に配られる手札の枚数です。</span></span>
+        </span>
         <div class="rule-options">
           <button class="rule-opt active" data-rule="handSize" data-value="7">7枚</button>
           <button class="rule-opt" data-rule="handSize" data-value="5">5枚</button>
         </div>
       </div>
       <div class="lobby-rule-row">
-        <span class="lobby-rule-label">タイマー</span>
+        <span class="lobby-rule-label">タイマー
+          <span class="rule-help" tabindex="0">?<span class="rule-help-tip">1ターンの制限時間です。時間切れになると自動で1枚引いて次の人に交代します。「なし」を選ぶと時間制限なしでじっくり考えられます。</span></span>
+        </span>
         <div class="rule-options">
           <button class="rule-opt active" data-rule="timerSeconds" data-value="15">15秒</button>
           <button class="rule-opt" data-rule="timerSeconds" data-value="30">30秒</button>
@@ -150,14 +154,18 @@
         </div>
       </div>
       <div class="lobby-rule-row">
-        <span class="lobby-rule-label">スタック</span>
+        <span class="lobby-rule-label">スタック
+          <span class="rule-help" tabindex="0">?<span class="rule-help-tip">「あり」にすると+2/+4カードを次の人に重ねて押し付けられます。出せない場合は積み重なった枚数をまとめて引きます。</span></span>
+        </span>
         <div class="rule-options">
           <button class="rule-opt active" data-rule="drawStack" data-value="false">なし</button>
           <button class="rule-opt" data-rule="drawStack" data-value="true">あり</button>
         </div>
       </div>
       <div class="lobby-rule-row">
-        <span class="lobby-rule-label">勝利点数</span>
+        <span class="lobby-rule-label">勝利点数
+          <span class="rule-help" tabindex="0">?<span class="rule-help-tip">この点数に達したプレイヤーが優勝し、ゲームが終了します。</span></span>
+        </span>
         <div class="rule-options">
           <button class="rule-opt active" data-rule="scoreLimit" data-value="500">500点</button>
           <button class="rule-opt" data-rule="scoreLimit" data-value="300">300点</button>
