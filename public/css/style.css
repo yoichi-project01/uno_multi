@@ -576,18 +576,19 @@ input::placeholder { color: var(--text-muted); }
 }
 
 /* ── Color Picker Overlay ──────────────────────────────────────────────────── */
+/* 画面全体を覆わず上部に浮かせることで、手札を見ながら色を選べるようにする */
 .overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,.8);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 200; backdrop-filter: blur(6px);
+  position: fixed; top: 12%; left: 50%; transform: translateX(-50%);
+  z-index: 200; pointer-events: none;
 }
 
 .overlay-content {
+  pointer-events: auto;
   background: var(--bg-card);
-  border: 1px solid rgba(255,255,255,.1);
-  border-radius: 20px; padding: 28px;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 20px; padding: 24px;
   text-align: center; min-width: 290px;
-  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+  box-shadow: 0 20px 50px rgba(0,0,0,.7);
 }
 .overlay-content h3 { font-size: 1.15rem; font-weight: 700; margin-bottom: 20px; }
 
