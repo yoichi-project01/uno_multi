@@ -266,37 +266,37 @@ function startTurn(room) {
   room.timerSeconds = turnSeconds;
   io.to(room.code).emit('turnStart', { playerId: player.playerId, seconds: turnSeconds });
 
-  if (turnSeconds <= 0) return; // タイマーなし
+  if (turnSeconds > 0) {
+    room.timerInterval = setInterval(() => {
+      room.timerSeconds--;
+      io.to(room.code).emit('timerTick', { seconds: room.timerSeconds });
 
-  room.timerInterval = setInterval(() => {
-    room.timerSeconds--;
-    io.to(room.code).emit('timerTick', { seconds: room.timerSeconds });
+      if (room.timerSeconds <= 0) {
+        stopTimer(room);
+        const p = room.players[room.currentPlayerIndex];
+        if (!p) return;
 
-    if (room.timerSeconds <= 0) {
-      stopTimer(room);
-      const p = room.players[room.currentPlayerIndex];
-      if (!p) return;
-
-      if (room.drawStackCount > 0) {
-        const count = room.drawStackCount;
-        const drawn = drawFromDeck(room, count);
-        p.hand.push(...drawn);
-        io.to(room.code).emit('playerDrewCards', { playerId: p.playerId, count });
-        room.drawStackCount = 0;
-      } else if (!room.hasDrawnThisTurn) {
-        const drawn = drawFromDeck(room, 1);
-        if (drawn.length > 0) {
+        if (room.drawStackCount > 0) {
+          const count = room.drawStackCount;
+          const drawn = drawFromDeck(room, count);
           p.hand.push(...drawn);
-          io.to(room.code).emit('playerDrewCards', { playerId: p.playerId, count: 1 });
+          io.to(room.code).emit('playerDrewCards', { playerId: p.playerId, count });
+          room.drawStackCount = 0;
+        } else if (!room.hasDrawnThisTurn) {
+          const drawn = drawFromDeck(room, 1);
+          if (drawn.length > 0) {
+            p.hand.push(...drawn);
+            io.to(room.code).emit('playerDrewCards', { playerId: p.playerId, count: 1 });
+          }
         }
+        const next = mod(room.currentPlayerIndex + room.direction, room.players.length);
+        advanceTurn(room, next);
+        broadcastGameState(room);
       }
-      const next = mod(room.currentPlayerIndex + room.direction, room.players.length);
-      advanceTurn(room, next);
-      broadcastGameState(room);
-    }
-  }, 1000);
+    }, 1000);
+  }
 
-  // Bot auto-play
+  // Bot auto-play（タイマー有無に関わらず必ず実行する）
   if (player.isBot) {
     const botId = player.playerId;
     const delay = 1200 + Math.random() * 800;
