@@ -364,7 +364,9 @@ input::placeholder { color: var(--text-muted); }
 .deck-area {
   position: relative; cursor: pointer;
 }
-.deck-area:hover .card--back { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,.7); }
+@media (hover: hover) {
+  .deck-area:hover .card--back { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,.7); }
+}
 
 .card-count-badge {
   position: absolute; bottom: -10px; right: -10px;
@@ -720,12 +722,16 @@ input::placeholder { color: var(--text-muted); }
   box-shadow: 0 8px 22px rgba(0,0,0,.6), 0 0 0 2.5px rgba(255,255,255,.6);
   border-color: rgba(255,255,255,.75);
 }
-.hand-card.playable:hover {
-  transform: translateY(-18px) !important;
-  box-shadow: 0 12px 30px rgba(0,0,0,.6), 0 0 0 3px #fde047,
-              0 0 24px rgba(253,224,71,.5) !important;
-  border-color: #fde047 !important;
-  z-index: 20;
+/* タッチデバイスでは:hoverが「1回目タップ=ホバー、2回目タップ=クリック」の
+   原因になるため、実際にホバー操作できる環境のみに限定する */
+@media (hover: hover) {
+  .hand-card.playable:hover {
+    transform: translateY(-18px) !important;
+    box-shadow: 0 12px 30px rgba(0,0,0,.6), 0 0 0 3px #fde047,
+                0 0 24px rgba(253,224,71,.5) !important;
+    border-color: #fde047 !important;
+    z-index: 20;
+  }
 }
 
 /* ── Login / Lobby / Join Screens ─────────────────────────────────────────── */
