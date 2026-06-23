@@ -793,24 +793,17 @@ input::placeholder { color: var(--text-muted); }
 }
 
 /* ── Login / Lobby / Join Screens ─────────────────────────────────────────── */
-#screen-login {
-  background: #fff;
-  justify-content: flex-start;
-  align-items: center;
-  overflow-y: auto;
-}
-
-/* ロビー・参加画面は待機室/ゲーム画面と同じダークテーマに統一 */
-#screen-lobby, #screen-join {
+/* 全画面ダークテーマに統一 */
+#screen-login, #screen-lobby, #screen-join {
   background: var(--bg);
   justify-content: flex-start;
   align-items: center;
   overflow-y: auto;
 }
-#screen-lobby .login-back-btn, #screen-join .login-back-btn { color: var(--text); }
-#screen-lobby .login-back-btn:hover, #screen-join .login-back-btn:hover { background: rgba(255,255,255,.08); }
-#screen-lobby .login-header-logo, #screen-join .login-header-logo { color: var(--text); }
-#screen-join .login-title { color: var(--text); }
+#screen-login .login-back-btn, #screen-lobby .login-back-btn, #screen-join .login-back-btn { color: var(--text); }
+#screen-login .login-back-btn:hover, #screen-lobby .login-back-btn:hover, #screen-join .login-back-btn:hover { background: rgba(255,255,255,.08); }
+#screen-login .login-header-logo, #screen-lobby .login-header-logo, #screen-join .login-header-logo { color: var(--text); }
+#screen-login .login-title, #screen-join .login-title { color: var(--text); }
 
 .lobby-user-card {
   display: flex; align-items: center; gap: 14px;
@@ -877,7 +870,7 @@ input::placeholder { color: var(--text-muted); }
 /* Tabs */
 .login-tabs {
   display: flex;
-  border-bottom: 1.5px solid #e5e7eb;
+  border-bottom: 1.5px solid rgba(255,255,255,.12);
 }
 .login-tab {
   flex: 1;
@@ -888,14 +881,14 @@ input::placeholder { color: var(--text-muted); }
   padding: 11px 8px;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #9ca3af;
+  color: var(--text-sub);
   cursor: pointer;
   transition: color .2s, border-color .2s;
   letter-spacing: 0.01em;
 }
 .login-tab.active {
-  color: #111;
-  border-bottom-color: #111;
+  color: var(--text);
+  border-bottom-color: var(--accent);
 }
 
 /* Auth forms */
@@ -909,17 +902,17 @@ input::placeholder { color: var(--text-muted); }
 
 #screen-login .form-group label {
   font-size: .8rem;
-  color: #6b7280;
+  color: var(--text-sub);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 #screen-login input {
-  background: #f9fafb;
-  border: 1.5px solid #e5e7eb;
+  background: var(--bg-panel);
+  border: 1.5px solid rgba(255,255,255,.12);
   border-radius: 12px;
-  color: #111;
+  color: var(--text);
   font-size: 1rem;
   padding: 14px 16px;
   outline: none;
@@ -927,11 +920,11 @@ input::placeholder { color: var(--text-muted); }
   width: 100%;
 }
 #screen-login input:focus {
-  border-color: #111;
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(17,17,17,.08);
+  border-color: var(--text);
+  background: var(--bg-panel);
+  box-shadow: 0 0 0 3px rgba(255,255,255,.08);
 }
-#screen-login input::placeholder { color: #d1d5db; }
+#screen-login input::placeholder { color: var(--text-muted); }
 
 /* ロビー・参加画面は#screen-lobby/#screen-join専用スコープがないためベースのダーク用 .form-group/input にフォールバック */
 #screen-lobby .form-group, #screen-join .form-group { gap: 7px; }
@@ -987,13 +980,13 @@ input::placeholder { color: var(--text-muted); }
   cursor: not-allowed;
 }
 
-#screen-lobby .auth-error, #screen-join .auth-error {
+#screen-login .auth-error, #screen-lobby .auth-error, #screen-join .auth-error {
   background: rgba(239,68,68,.15);
   border: 1px solid rgba(239,68,68,.35);
   color: #fca5a5;
 }
-#screen-lobby .auth-submit-btn, #screen-join .auth-submit-btn { background: var(--accent); }
-#screen-lobby .auth-submit-btn:hover, #screen-join .auth-submit-btn:hover { background: #dc2626; }
+#screen-login .auth-submit-btn, #screen-lobby .auth-submit-btn, #screen-join .auth-submit-btn { background: var(--accent); }
+#screen-login .auth-submit-btn:hover, #screen-lobby .auth-submit-btn:hover, #screen-join .auth-submit-btn:hover { background: #dc2626; }
 
 /* Auth success banner in guest sheet */
 .auth-user-banner {
