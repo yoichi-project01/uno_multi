@@ -727,19 +727,6 @@ input::placeholder { color: var(--text-muted); }
   border-color: #fde047 !important;
   z-index: 20;
 }
-.hand-card.selected {
-  transform: translateY(-24px) !important;
-  box-shadow: 0 16px 36px rgba(0,0,0,.7), 0 0 0 3px #fde047,
-              0 0 32px rgba(253,224,71,.6) !important;
-  border-color: #fde047 !important;
-  z-index: 30;
-}
-@keyframes selectPop {
-  0%   { transform: translateY(-24px) scale(1); }
-  40%  { transform: translateY(-28px) scale(1.06); }
-  100% { transform: translateY(-24px) scale(1); }
-}
-.hand-card.just-selected { animation: selectPop 0.25s ease forwards; }
 
 /* ── Login / Lobby / Join Screens ─────────────────────────────────────────── */
 #screen-login {

@@ -21,7 +21,6 @@ let myNickname = null;
 let myAvatar = null;
 let isHost = false;
 let gameState = null;
-let selectedUid = null;
 let pendingColorCard = null;
 let emoteOpen = false;
 let countdownTimer = null;
@@ -753,7 +752,6 @@ function bindEvents() {
   els.btnDraw.addEventListener('click', () => {
     if (!gameState?.isMyTurn || gameState?.waitingForColor || gameState?.hasDrawnThisTurn) return;
     socket.emit('drawCard');
-    selectedUid = null;
   });
 
   els.btnPass.addEventListener('click', () => {
@@ -990,33 +988,10 @@ function handleCardClick(card, isPlayable, isMyTurn) {
   if (!isMyTurn || !isPlayable) return;
   if (gameState?.waitingForColor) return;
 
-  if (card.type === 'wild' || card.type === 'wild-draw4') {
-    const el = els.myHand.querySelector(`[data-uid="${card.uid}"]`);
-    if (el) flyCardToDiscard(el);
-    socket.emit('playCard', { uid: card.uid });
-    selectedUid = null;
-    els.btnPass.classList.add('hidden');
-  } else {
-    if (selectedUid === card.uid) {
-      // 2回目タップ → プレイ
-      const el = els.myHand.querySelector(`[data-uid="${card.uid}"]`);
-      if (el) flyCardToDiscard(el);
-      socket.emit('playCard', { uid: card.uid });
-      selectedUid = null;
-      els.btnPass.classList.add('hidden');
-    } else {
-      // 1回目タップ → 選択
-      document.querySelectorAll('.hand-card.selected').forEach(c => {
-        c.classList.remove('selected', 'just-selected');
-      });
-      selectedUid = card.uid;
-      const el = els.myHand.querySelector(`[data-uid="${card.uid}"]`);
-      if (el) {
-        el.classList.add('selected', 'just-selected');
-        el.addEventListener('animationend', () => el.classList.remove('just-selected'), { once: true });
-      }
-    }
-  }
+  const el = els.myHand.querySelector(`[data-uid="${card.uid}"]`);
+  if (el) flyCardToDiscard(el);
+  socket.emit('playCard', { uid: card.uid });
+  els.btnPass.classList.add('hidden');
 }
 
 // ── Play Animation ────────────────────────────────────────────────────────────
