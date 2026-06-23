@@ -297,7 +297,7 @@ function setupSocket() {
   socket.on('accountDeleted', () => {
     clearSession();
     myAvatar = null;
-    els.userChip.classList.add('hidden');
+    updateUserChip(null);
     showScreen('top');
   });
 
@@ -648,7 +648,7 @@ function bindEvents() {
   els.btnLogout.addEventListener('click', () => {
     myAvatar = null;
     clearSession();
-    els.userChip.classList.add('hidden');
+    updateUserChip(null);
     showScreen('top');
   });
 
