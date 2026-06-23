@@ -859,6 +859,11 @@ function renderGame(state) {
   updateDirectionBadge(state.direction);
   els.deckCount.textContent = state.deckCount;
 
+  // 出せるカードが無く、山札を引くしかない状況を光らせて知らせる
+  const mustDraw = state.isMyTurn && !state.hasDrawnThisTurn && !state.waitingForColor
+    && (!state.playableUids || state.playableUids.length === 0);
+  els.btnDraw.classList.toggle('must-draw', mustDraw);
+
   // Draw stack badge
   if (state.drawStackCount > 0) {
     els.drawStackBadge.textContent = `ドロースタック +${state.drawStackCount}`;
