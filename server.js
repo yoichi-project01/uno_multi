@@ -129,6 +129,7 @@ function executeBotTurn(room, pIdx) {
   const player = room.players[pIdx];
   if (!player?.isBot || pIdx !== room.currentPlayerIndex) return;
   if (room.waitingForColor) return;
+  closeStaleUnoWindow(room, player.playerId);
 
   let playableUids;
   if (room.drawStackCount > 0) {
@@ -308,10 +309,17 @@ function startTurn(room) {
 }
 
 function advanceTurn(room, toIndex) {
-  if (room.unoState && !room.unoState.declared) room.unoState = null;
   room.currentPlayerIndex = toIndex;
   room.lastActivity = Date.now();
   startTurn(room);
+}
+
+// 次のプレイヤーがアクション(playCard/drawCard)を起こした時点で、
+// 他人の宣言忘れ告発ウィンドウを閉じる（本人の宣言/告発はそれより前に届いていれば有効）
+function closeStaleUnoWindow(room, actingPlayerId) {
+  if (room.unoState && !room.unoState.declared && room.unoState.playerId !== actingPlayerId) {
+    room.unoState = null;
+  }
 }
 
 // ── Round / Game lifecycle ────────────────────────────────────────────────────
@@ -675,6 +683,7 @@ io.on('connection', (socket) => {
     if (room.waitingForColor) return socket.emit('error', { message: '色の選択を待っています' });
 
     const player = room.players[pIdx];
+    closeStaleUnoWindow(room, player.playerId);
     const cardIdx = player.hand.findIndex(c => c.uid === uid);
     if (cardIdx === -1) return socket.emit('error', { message: 'カードが手札にありません' });
 
@@ -791,6 +800,7 @@ io.on('connection', (socket) => {
     if (room.waitingForColor) return;
 
     const player = room.players[pIdx];
+    closeStaleUnoWindow(room, player.playerId);
 
     // ドロースタック: 累積枚数を全部引いてターン終了
     if (room.drawStackCount > 0) {
