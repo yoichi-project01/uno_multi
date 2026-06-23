@@ -351,6 +351,7 @@ function setupSocket() {
     const player = findPlayer(playerId);
     const isMe = playerId === myPlayerId;
     els.turnLabel.textContent = isMe ? 'あなたのターン！' : `${player?.nickname || '?'} のターン`;
+    els.turnLabel.classList.toggle('my-turn', isMe);
     els.btnPass.classList.add('hidden');
     if (isMe) {
       showTurnBanner();
