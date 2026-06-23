@@ -911,8 +911,10 @@ function renderOpponents(players, currentPlayerIndex) {
     const miniCards = Array.from({ length: handCount }, () =>
       `<div class="opponent-card-mini"></div>`
     ).join('');
+    const avatarContent = player.avatar || player.nickname.charAt(0).toUpperCase();
 
     div.innerHTML = `
+      <div class="opponent-avatar avatar-${idx}">${avatarContent}</div>
       <div class="opponent-name-bar">${escHtml(player.nickname)}${player.connected === false ? ' 📵' : ''}</div>
       <div class="opponent-hand">${miniCards}</div>
       <div class="opponent-info-row">

@@ -312,6 +312,13 @@ input::placeholder { color: var(--text-muted); }
   transition: background .2s, border-color .2s;
 }
 
+.opponent-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .95rem; font-weight: 700; color: #fff;
+  border: 2px solid rgba(255,255,255,.18);
+  flex-shrink: 0;
+}
 .opponent-name-bar {
   font-size: .8rem; color: rgba(255,255,255,.7); white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis; max-width: 100px; text-align: center;
@@ -323,6 +330,10 @@ input::placeholder { color: var(--text-muted); }
   background: rgba(253,230,138,.1);
   border-color: rgba(253,230,138,.55);
   animation: activeTurnPulse 1.4s ease-in-out infinite;
+}
+.opponent.active-player .opponent-avatar {
+  border-color: #fde68a;
+  box-shadow: 0 0 14px rgba(253,230,138,.7);
 }
 .opponent.active-player .opponent-name-bar {
   color: #fde68a; font-weight: 800;
