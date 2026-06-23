@@ -688,11 +688,14 @@ io.on('connection', (socket) => {
     if (cardIdx === -1) return socket.emit('error', { message: 'カードが手札にありません' });
 
     const card = player.hand[cardIdx];
-    if (!canPlay(card, room.topCard, room.currentColor)) return socket.emit('error', { message: 'そのカードは出せません' });
 
-    // ドロースタック中はドローカードのみ出せる
-    if (room.drawStackCount > 0 && card.type !== 'draw2' && card.type !== 'wild-draw4') {
-      return socket.emit('error', { message: `ドロースタック中です。ドローカードを出すか${room.drawStackCount}枚引いてください` });
+    // ドロースタック中はdraw2/wild-draw4であれば色に関わらず常に出せる(通常のcanPlay判定はスキップ)
+    if (room.drawStackCount > 0) {
+      if (card.type !== 'draw2' && card.type !== 'wild-draw4') {
+        return socket.emit('error', { message: `ドロースタック中です。ドローカードを出すか${room.drawStackCount}枚引いてください` });
+      }
+    } else if (!canPlay(card, room.topCard, room.currentColor)) {
+      return socket.emit('error', { message: 'そのカードは出せません' });
     }
 
     const isLastCard = player.hand.length === 1;
