@@ -472,7 +472,7 @@ io.on('connection', (socket) => {
         socketMeta.set(socket.id, { roomCode, playerId: existingId });
         socket.join(roomCode);
         room.lastActivity = Date.now();
-        socket.emit('roomJoined', { roomCode, playerId: existingId, isHost: existingId === room.hostPlayerId });
+        socket.emit('roomJoined', { roomCode, playerId: existingId, isHost: existingId === room.hostPlayerId, rules: room.rules });
         io.to(roomCode).emit('playerReconnected', { playerId: existingId, players: playerList(room) });
         if (room.status !== 'waiting') {
           socket.emit('gameState', buildGameState(room, existingId));
@@ -480,7 +480,7 @@ io.on('connection', (socket) => {
             socket.emit('turnStart', { playerId: room.players[room.currentPlayerIndex]?.playerId, seconds: room.timerSeconds });
           }
         } else {
-          io.to(roomCode).emit('roomUpdate', { players: playerList(room) });
+          io.to(roomCode).emit('roomUpdate', { players: playerList(room), rules: room.rules });
         }
         return;
       }
@@ -919,6 +919,21 @@ function handleLeave(socket, isDisconnect) {
     if (room.status === 'playing') broadcastGameState(room);
     if (room.status === 'waiting') io.to(roomCode).emit('roomUpdate', { players: playerList(room) });
   } else {
+    // 退出者が現在の手番だった場合、配列shift前に「次に誰の手番になるべきか」を確定しておく
+    const wasCurrentPlayerId = room.players[room.currentPlayerIndex]?.playerId;
+    let forcedNextPlayerId = null;
+    if (room.status === 'playing' && wasCurrentPlayerId === playerId) {
+      const nextOldIdx = mod(room.currentPlayerIndex + room.direction, room.players.length);
+      forcedNextPlayerId = room.players[nextOldIdx]?.playerId;
+    }
+    // 退出者が色選択待ちだった場合、永久フリーズを防ぐためデフォルト色で解決する（配列shift前にターゲットを確定）
+    let colorChoiceTargetId = null;
+    const wasWaitingForColor = room.waitingForColor?.playerId === playerId;
+    if (wasWaitingForColor) {
+      colorChoiceTargetId = room.players[room.waitingForColor.nextIndex]?.playerId;
+    }
+    if (room.unoState?.playerId === playerId) room.unoState = null;
+
     room.players = room.players.filter(p => p.playerId !== playerId);
     if (room.players.length === 0) { stopTimer(room); rooms.delete(roomCode); return; }
 
@@ -926,21 +941,45 @@ function handleLeave(socket, isDisconnect) {
 
     if (room.status === 'waiting') {
       io.to(roomCode).emit('roomUpdate', { players: playerList(room) });
-    } else if (room.status === 'playing') {
-      if (room.currentPlayerIndex >= room.players.length) {
-        room.currentPlayerIndex = 0;
-        stopTimer(room);
-        startTurn(room);
-      }
-      if (room.players.length < 2) {
-        stopTimer(room);
-        room.status = 'waiting';
-        io.to(roomCode).emit('gameCancelled', { reason: 'プレイヤーが退出したためゲームを終了します' });
-      } else {
-        io.to(roomCode).emit('playerLeft', { playerId, players: playerList(room) });
-        broadcastGameState(room);
-      }
+      return;
     }
+    if (room.status !== 'playing') return;
+
+    const hasHuman = room.players.some(p => !p.isBot);
+    if (room.players.length < 2 || !hasHuman) {
+      stopTimer(room);
+      room.status = 'waiting';
+      room.waitingForColor = null;
+      if (!hasHuman) { rooms.delete(roomCode); return; }
+      room.players = room.players.filter(p => !p.isBot);
+      io.to(roomCode).emit('gameCancelled', { reason: 'プレイヤーが退出したためゲームを終了します' });
+      io.to(roomCode).emit('roomUpdate', { players: playerList(room) });
+      return;
+    }
+
+    if (wasWaitingForColor) {
+      room.currentColor = 'red';
+      room.waitingForColor = null;
+      const newIdx = colorChoiceTargetId ? room.players.findIndex(p => p.playerId === colorChoiceTargetId) : -1;
+      io.to(roomCode).emit('colorChosen', { color: 'red', playerId });
+      io.to(roomCode).emit('playerLeft', { playerId, players: playerList(room) });
+      advanceTurn(room, newIdx >= 0 ? newIdx : 0);
+      broadcastGameState(room);
+      return;
+    }
+
+    const targetId = forcedNextPlayerId || wasCurrentPlayerId;
+    const newIdx = targetId ? room.players.findIndex(p => p.playerId === targetId) : -1;
+    room.currentPlayerIndex = newIdx >= 0 ? newIdx : 0;
+
+    io.to(roomCode).emit('playerLeft', { playerId, players: playerList(room) });
+
+    if (forcedNextPlayerId) {
+      // 手番が実際に次の人へ移るのでターン/タイマー/BOT起動をやり直す
+      stopTimer(room);
+      startTurn(room);
+    }
+    broadcastGameState(room);
   }
 }
 

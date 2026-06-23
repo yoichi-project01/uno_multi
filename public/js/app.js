@@ -246,6 +246,25 @@ function setupSocket() {
       els.registerError.textContent = 'サーバーに接続できません。再度お試しください。';
       els.registerError.classList.remove('hidden');
     }
+    // 設定画面のフォームも切断中はボタンを復元する
+    const usernameBtn = els.formChangeUsername?.querySelector('button[type="submit"]');
+    if (usernameBtn?.disabled) {
+      usernameBtn.disabled = false;
+      usernameBtn.textContent = '変更する';
+      showSettingsMsg(els.usernameChangeMsg, 'サーバーに接続できません。再度お試しください。', false);
+    }
+    const passwordBtn = els.formChangePassword?.querySelector('button[type="submit"]');
+    if (passwordBtn?.disabled) {
+      passwordBtn.disabled = false;
+      passwordBtn.textContent = '変更する';
+      showSettingsMsg(els.passwordChangeMsg, 'サーバーに接続できません。再度お試しください。', false);
+    }
+    const deleteBtn = els.formDeleteAccount?.querySelector('button[type="submit"]');
+    if (deleteBtn?.disabled) {
+      deleteBtn.disabled = false;
+      deleteBtn.textContent = 'アカウントを削除する';
+      showSettingsMsg(els.deleteMsg, 'サーバーに接続できません。再度お試しください。', false);
+    }
   });
 
   // ── Settings events ──
@@ -352,7 +371,8 @@ function setupSocket() {
     const isMe = playerId === myPlayerId;
     els.turnLabel.textContent = isMe ? 'あなたのターン！' : `${player?.nickname || '?'} のターン`;
     els.turnLabel.classList.toggle('my-turn', isMe);
-    els.btnPass.classList.add('hidden');
+    // パスボタンの表示はgameStateで一元管理する（再接続時にここで無条件に消すと
+    // 「ドロー済み・出せるカードなし」状態のパスボタンが誤って消えてしまうため）
     if (isMe) {
       showTurnBanner();
       // Green flash on game screen
@@ -743,7 +763,9 @@ function bindEvents() {
 
   els.btnCopyUrl.addEventListener('click', () => {
     const url = `${location.origin}/room/${myRoomCode}`;
-    navigator.clipboard.writeText(url).then(() => showToast('URLをコピーしました！', 1500));
+    navigator.clipboard.writeText(url)
+      .then(() => showToast('URLをコピーしました！', 1500))
+      .catch(() => showToast('コピーに失敗しました', 1500));
   });
 
   els.btnStart.addEventListener('click', () => {
@@ -872,30 +894,38 @@ function renderGame(state) {
     els.drawStackBadge.classList.add('hidden');
   }
 
-  // Restore UNO state on reconnect
+  // UNO宣言/告発ボタンの表示をサーバー状態と毎回同期する（消し忘れによる残留を防ぐ）
   if (state.unoState && !state.unoState.declared) {
     if (state.unoState.playerId === myPlayerId) {
       els.btnUno.classList.remove('hidden');
+      els.btnChallenge.classList.add('hidden');
     } else {
       const target = findPlayer(state.unoState.playerId);
       els.btnChallenge.textContent = `告発！ ${target?.nickname || '?'}`;
       els.btnChallenge.dataset.target = state.unoState.playerId;
       els.btnChallenge.classList.remove('hidden');
+      els.btnUno.classList.add('hidden');
     }
+  } else {
+    els.btnUno.classList.add('hidden');
+    els.btnChallenge.classList.add('hidden');
   }
 
-  // Pass button visibility
-  if (state.isMyTurn && state.hasDrawnThisTurn) {
-    els.btnPass.classList.remove('hidden');
-  }
+  // パスボタンの表示をサーバー状態と毎回同期する
+  els.btnPass.classList.toggle('hidden', !(state.isMyTurn && state.hasDrawnThisTurn));
 
-  // Color picker for reconnect
+  // 色選択オーバーレイの表示をサーバー状態と毎回同期する
   if (state.waitingForColor === myPlayerId) {
     els.colorPicker.classList.remove('hidden');
+    els.waitingColorOverlay.classList.add('hidden');
   } else if (state.waitingForColor) {
     const player = state.players.find(p => p.playerId === state.waitingForColor);
     els.waitingColorText.textContent = `${player?.nickname || '?'} が色を選んでいます...`;
     els.waitingColorOverlay.classList.remove('hidden');
+    els.colorPicker.classList.add('hidden');
+  } else {
+    els.colorPicker.classList.add('hidden');
+    els.waitingColorOverlay.classList.add('hidden');
   }
 }
 
