@@ -27,6 +27,8 @@ let countdownTimer = null;
 let imageCache = {};
 let pendingLandingEffect = false; // 相手カード着地アニメーション用フラグ
 let currentRules = { handSize: 7, timerSeconds: 15, drawStack: false, scoreLimit: 500, maxPlayers: 4 };
+let currentFriends = [];
+let currentPendingRequests = [];
 
 // ── DOM Refs ──────────────────────────────────────────────────────────────────
 const screens = { top: $('screen-top'), login: $('screen-login'), lobby: $('screen-lobby'), join: $('screen-join'), rules: $('screen-rules'), waiting: $('screen-waiting'), game: $('screen-game'), roundResult: $('screen-round-result'), gameEnd: $('screen-game-end'), settings: $('screen-settings') };
@@ -129,6 +131,17 @@ const els = {
   formDeleteAccount: $('form-delete-account'),
   deletePw: $('delete-pw'),
   deleteMsg: $('delete-msg'),
+  // Friends
+  formAddFriend: $('form-add-friend'),
+  addFriendUsername: $('add-friend-username'),
+  friendsMsg: $('friends-msg'),
+  friendRequestsSection: $('friend-requests-section'),
+  friendRequestsList: $('friend-requests-list'),
+  friendsListEl: $('friends-list'),
+  btnInviteFriend: $('btn-invite-friend'),
+  friendInviteModal: $('friend-invite-modal'),
+  btnCloseInviteModal: $('btn-close-invite-modal'),
+  inviteFriendsList: $('invite-friends-list'),
 };
 
 function $(id) { return document.getElementById(id); }
@@ -322,6 +335,52 @@ function setupSocket() {
     showScreen('top');
   });
 
+  // ── Friends events ──
+  socket.on('friendsList', ({ friends, pending }) => {
+    currentFriends = friends || [];
+    currentPendingRequests = pending || [];
+    renderFriendsTab();
+    renderInviteModal();
+  });
+
+  socket.on('friendsError', ({ message }) => {
+    showSettingsMsg(els.friendsMsg, message, false);
+  });
+
+  socket.on('friendRequestSent', ({ autoAccepted, username }) => {
+    showSettingsMsg(els.friendsMsg, autoAccepted
+      ? `${username} とフレンドになりました！`
+      : `${username} にフレンドリクエストを送信しました`, true);
+    els.addFriendUsername.value = '';
+    socket.emit('getFriends');
+  });
+
+  socket.on('friendRequestReceived', ({ username }) => {
+    showToast(`${username} からフレンドリクエストが届きました`, 2500);
+    if (els.friendRequestsSection) socket.emit('getFriends');
+  });
+
+  socket.on('friendRequestAccepted', ({ username }) => {
+    showToast(`${username} とフレンドになりました！`, 2500);
+    socket.emit('getFriends');
+  });
+
+  socket.on('friendRequestResponded', () => {
+    socket.emit('getFriends');
+  });
+
+  socket.on('friendRemoved', () => {
+    socket.emit('getFriends');
+  });
+
+  socket.on('friendInviteSent', () => {
+    showToast('招待を送信しました', 1500);
+  });
+
+  socket.on('roomInvite', ({ roomCode, fromUsername }) => {
+    showRoomInviteBanner(roomCode, fromUsername);
+  });
+
   socket.on('roomCreated', ({ roomCode, playerId, players, rules }) => {
     saveSession(roomCode, playerId, myNickname);
     isHost = true;
@@ -338,6 +397,7 @@ function setupSocket() {
     els.displayCode.textContent = roomCode;
     els.btnStart.classList.toggle('hidden', !host);
     els.waitingForHost.classList.toggle('hidden', host);
+    els.btnInviteFriend.classList.toggle('hidden', !myPlayerId);
     // If reconnecting to an active game, gameState event will fire next
   });
 
@@ -558,7 +618,7 @@ function openSettings() {
   document.querySelectorAll('.avatar-option').forEach(b => {
     b.classList.toggle('selected', b.dataset.avatar === myAvatar);
   });
-  [els.avatarMsg, els.usernameChangeMsg, els.passwordChangeMsg, els.deleteMsg]
+  [els.avatarMsg, els.usernameChangeMsg, els.passwordChangeMsg, els.deleteMsg, els.friendsMsg]
     .forEach(el => el?.classList.add('hidden'));
   // 最初のタブをアクティブに
   switchSettingsTab('avatar');
@@ -570,6 +630,111 @@ function switchSettingsTab(name) {
     t.classList.toggle('active', t.dataset.tab === name));
   document.querySelectorAll('.settings-tab-panel').forEach(p =>
     p.classList.toggle('active', p.dataset.panel === name));
+  if (name === 'friends') socket.emit('getFriends');
+}
+
+// ── Friends ───────────────────────────────────────────────────────────────────
+function renderFriendsTab() {
+  if (currentPendingRequests.length > 0) {
+    els.friendRequestsSection.classList.remove('hidden');
+    els.friendRequestsList.innerHTML = currentPendingRequests.map(p => `
+      <div class="friend-row" data-player-id="${p.playerId}">
+        <div class="friend-avatar">${p.avatar || p.username[0].toUpperCase()}</div>
+        <div class="friend-info">
+          <div class="friend-name">${escHtml(p.username)}</div>
+          <div class="friend-status">フレンドリクエスト</div>
+        </div>
+        <div class="friend-actions">
+          <button class="friend-action-btn accept" data-action="accept" data-player-id="${p.playerId}">承認</button>
+          <button class="friend-action-btn reject" data-action="reject" data-player-id="${p.playerId}">拒否</button>
+        </div>
+      </div>`).join('');
+  } else {
+    els.friendRequestsSection.classList.add('hidden');
+    els.friendRequestsList.innerHTML = '';
+  }
+
+  if (currentFriends.length === 0) {
+    els.friendsListEl.innerHTML = '<p class="friends-empty">まだフレンドがいません。ユーザー名で追加してみましょう。</p>';
+  } else {
+    els.friendsListEl.innerHTML = currentFriends.map(f => `
+      <div class="friend-row" data-player-id="${f.playerId}">
+        <div class="friend-avatar">
+          ${f.avatar || f.username[0].toUpperCase()}
+          <span class="friend-online-dot ${f.online ? 'online' : ''}"></span>
+        </div>
+        <div class="friend-info">
+          <div class="friend-name">${escHtml(f.username)}</div>
+          <div class="friend-status">${f.online ? 'オンライン' : 'オフライン'}</div>
+        </div>
+        <div class="friend-actions">
+          <button class="friend-action-btn remove" data-action="remove" data-player-id="${f.playerId}">削除</button>
+        </div>
+      </div>`).join('');
+  }
+}
+
+function openFriendInviteModal() {
+  els.friendInviteModal.classList.remove('hidden');
+  socket.emit('getFriends');
+}
+
+function renderInviteModal() {
+  if (els.friendInviteModal.classList.contains('hidden')) return;
+  const onlineFriends = currentFriends.filter(f => f.online);
+  if (onlineFriends.length === 0) {
+    els.inviteFriendsList.innerHTML = '<p class="friends-empty">オンラインのフレンドがいません</p>';
+    return;
+  }
+  els.inviteFriendsList.innerHTML = onlineFriends.map(f => `
+    <div class="friend-row" data-player-id="${f.playerId}">
+      <div class="friend-avatar">${f.avatar || f.username[0].toUpperCase()}<span class="friend-online-dot online"></span></div>
+      <div class="friend-info"><div class="friend-name">${escHtml(f.username)}</div></div>
+      <div class="friend-actions">
+        <button class="friend-action-btn invite" data-action="invite" data-player-id="${f.playerId}">招待</button>
+      </div>
+    </div>`).join('');
+}
+
+let inviteBannerTimer = null;
+function showRoomInviteBanner(roomCode, fromUsername) {
+  document.querySelectorAll('.room-invite-banner').forEach(b => b.remove());
+  if (inviteBannerTimer) clearTimeout(inviteBannerTimer);
+
+  const banner = document.createElement('div');
+  banner.className = 'room-invite-banner';
+  banner.innerHTML = `
+    <div class="room-invite-text">🎮 ${escHtml(fromUsername)} さんから部屋「${escHtml(roomCode)}」への招待です</div>
+    <div class="room-invite-actions">
+      <button class="btn btn-outline btn-join-invite">閉じる</button>
+      <button class="btn btn-primary btn-accept-invite">参加する</button>
+    </div>
+  `;
+  document.body.appendChild(banner);
+
+  const remove = () => {
+    banner.classList.add('out');
+    banner.addEventListener('animationend', () => banner.remove(), { once: true });
+  };
+  banner.querySelector('.btn-join-invite').addEventListener('click', remove);
+  banner.querySelector('.btn-accept-invite').addEventListener('click', () => {
+    remove();
+    joinRoomByCode(roomCode);
+  });
+
+  inviteBannerTimer = setTimeout(remove, 15000);
+}
+
+function joinRoomByCode(code) {
+  if (myPlayerId && myNickname) {
+    socket.emit('joinRoom', { roomCode: code, nickname: myNickname, avatar: myAvatar });
+  } else {
+    els.joinNicknameGroup.classList.remove('hidden');
+    els.joinNicknameInput.value = '';
+    els.joinError.classList.add('hidden');
+    els.joinRoomCodeInput.value = code;
+    showScreen('join');
+  }
 }
 
 // ── Guest sheet open/close ────────────────────────────────────────────────────
@@ -708,6 +873,42 @@ function bindEvents() {
     btn.disabled = true;
     btn.textContent = '削除中...';
     socket.emit('deleteAccount', { password });
+  });
+
+  // ── Friends ──
+  els.formAddFriend.addEventListener('submit', e => {
+    e.preventDefault();
+    const username = els.addFriendUsername.value.trim();
+    if (!username) return;
+    socket.emit('sendFriendRequest', { username });
+  });
+
+  els.friendRequestsList.addEventListener('click', e => {
+    const btn = e.target.closest('.friend-action-btn');
+    if (!btn) return;
+    const requesterId = btn.dataset.playerId;
+    if (btn.dataset.action === 'accept') socket.emit('respondFriendRequest', { requesterId, accept: true });
+    else if (btn.dataset.action === 'reject') socket.emit('respondFriendRequest', { requesterId, accept: false });
+  });
+
+  els.friendsListEl.addEventListener('click', e => {
+    const btn = e.target.closest('.friend-action-btn');
+    if (!btn) return;
+    if (btn.dataset.action === 'remove') {
+      if (confirm('フレンドを削除しますか？')) socket.emit('removeFriend', { friendId: btn.dataset.playerId });
+    }
+  });
+
+  els.btnInviteFriend.addEventListener('click', openFriendInviteModal);
+  els.btnCloseInviteModal.addEventListener('click', () => {
+    els.friendInviteModal.classList.add('hidden');
+  });
+
+  els.inviteFriendsList.addEventListener('click', e => {
+    const btn = e.target.closest('.friend-action-btn');
+    if (!btn || btn.dataset.action !== 'invite') return;
+    btn.disabled = true;
+    socket.emit('inviteFriendToRoom', { friendId: btn.dataset.playerId });
   });
 
   // ── Login / Register tabs ──
@@ -854,6 +1055,7 @@ function showWaitingRoom(roomCode, players, host) {
   els.displayCode.textContent = roomCode;
   els.btnStart.classList.toggle('hidden', !host);
   els.waitingForHost.classList.toggle('hidden', host);
+  els.btnInviteFriend.classList.toggle('hidden', !myPlayerId);
   renderWaitingPlayers(players);
 }
 

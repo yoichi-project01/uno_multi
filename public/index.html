@@ -264,7 +264,10 @@
     <span class="room-code-label">ルームコード</span>
     <span id="display-room-code" class="room-code-value">----</span>
   </div>
-  <button id="btn-copy-url" class="btn btn-outline btn-small">🔗 URLをコピー</button>
+  <div class="waiting-actions-row">
+    <button id="btn-copy-url" class="btn btn-outline btn-small">🔗 URLをコピー</button>
+    <button id="btn-invite-friend" class="btn btn-outline btn-small hidden">👥 フレンドを招待</button>
+  </div>
   <div id="waiting-players" class="waiting-players"></div>
   <div class="waiting-footer">
     <p id="waiting-hint" class="waiting-hint">2〜4人でプレイできます</p>
@@ -272,6 +275,17 @@
     <p id="waiting-for-host" class="hint-text">ホストがゲームを開始するのを待っています...</p>
   </div>
 </section>
+
+<!-- フレンド招待モーダル -->
+<div id="friend-invite-modal" class="modal-overlay hidden">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>フレンドを招待</h3>
+      <button id="btn-close-invite-modal" class="modal-close-btn" aria-label="閉じる">✕</button>
+    </div>
+    <div id="invite-friends-list" class="invite-friends-list"></div>
+  </div>
+</div>
 
 <!-- ③ Game Main Screen -->
 <section id="screen-game" class="screen">
@@ -391,6 +405,7 @@
     <button class="settings-tab active" data-tab="avatar">アイコン</button>
     <button class="settings-tab" data-tab="username">ユーザー名</button>
     <button class="settings-tab" data-tab="password">パスワード</button>
+    <button class="settings-tab" data-tab="friends">フレンド</button>
     <button class="settings-tab" data-tab="account">アカウント</button>
   </div>
 
@@ -444,6 +459,25 @@
         <p id="password-change-msg" class="settings-msg hidden"></p>
         <button type="submit" class="btn auth-submit-btn">変更する</button>
       </form>
+    </div>
+
+    <!-- タブ: フレンド -->
+    <div class="settings-tab-panel friends-panel" data-panel="friends">
+      <form id="form-add-friend" class="friends-add-form">
+        <input id="add-friend-username" type="text" placeholder="ユーザー名で検索..." autocomplete="off" maxlength="16">
+        <button type="submit" class="btn btn-primary">追加</button>
+      </form>
+      <p id="friends-msg" class="settings-msg hidden"></p>
+      <div class="friends-scroll">
+        <div id="friend-requests-section" class="friends-section hidden">
+          <div class="friends-section-title">フレンドリクエスト</div>
+          <div id="friend-requests-list"></div>
+        </div>
+        <div class="friends-section">
+          <div class="friends-section-title">フレンド一覧</div>
+          <div id="friends-list"></div>
+        </div>
+      </div>
     </div>
 
     <!-- タブ: アカウント -->

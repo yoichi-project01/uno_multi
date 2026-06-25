@@ -113,11 +113,29 @@ uno_multi/
 
 | イベント | 内容 |
 |----------|------|
-| `roomCreated` | `{ roomCode, playerId, players }` |
-| `roomJoined` | `{ roomCode, playerId, isHost }` |
+| `roomCreated` | `{ roomCode, playerId, players, rules }` |
+| `roomJoined` | `{ roomCode, playerId, isHost, rules }` |
 | `gameState` | 個人宛ゲーム状態（手札含む） |
 | `drewCard` | `{ card, canPlay }` 自分が引いたカード |
 | `error` | `{ message }` |
+
+### フレンド機能（ログイン必須）
+
+| イベント | 方向 | ペイロード | 説明 |
+|----------|------|-----------|------|
+| `getFriends` | C→S | — | フレンド一覧＋保留中リクエスト取得 |
+| `sendFriendRequest` | C→S | `{ username }` | ユーザー名でフレンド申請 |
+| `respondFriendRequest` | C→S | `{ requesterId, accept }` | 承認/拒否 |
+| `removeFriend` | C→S | `{ friendId }` | フレンド削除 |
+| `inviteFriendToRoom` | C→S | `{ friendId }` | 待機中の自室にフレンドを招待（フレンドかつオンライン限定） |
+| `friendsList` | S→C(本人) | `{ friends: [{playerId,username,avatar,online}], pending: [...] }` | 一覧取得結果 |
+| `friendsError` | S→C(本人) | `{ message }` | エラー |
+| `friendRequestSent` | S→C(本人) | `{ autoAccepted, username }` | 申請送信完了（相手から既に申請あり→自動承認） |
+| `friendRequestReceived` | S→C(相手) | `{ playerId, username }` | 申請を受けた通知 |
+| `friendRequestAccepted` | S→C(申請者) | `{ playerId, username }` | 承認された通知 |
+| `roomInvite` | S→C(招待先) | `{ roomCode, fromPlayerId, fromUsername }` | 部屋招待通知 |
+
+フレンド関係は `friendships` テーブル（`requester_id`/`recipient_id`/`status`）で管理。オンライン判定は `sessions` Map（socketId→playerId）を逆引きして判定するため、ソケット切断＝オフライン扱い。アカウント削除時は `friendships` の関連行も削除される。
 
 ---
 

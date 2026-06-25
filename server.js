@@ -9,7 +9,10 @@ const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const { createDeck, shuffle, calculateHandPoints } = require('./game/cardDeck');
 const { mod, canPlay, getPlayableUids, resolveCardEffect } = require('./game/gameEngine');
-const { insertUser, getUserByUsername, getUserByPlayerId, updateUsername, updatePassword, updateAvatar, deleteUser } = require('./db');
+const {
+  insertUser, getUserByUsername, getUserByPlayerId, updateUsername, updatePassword, updateAvatar, deleteUser,
+  sendFriendRequest, respondToFriendRequest, removeFriendship, getFriendsList, getPendingRequests,
+} = require('./db');
 
 const app = express();
 const httpServer = createServer(app);
@@ -426,6 +429,14 @@ function getMeta(socket) {
   return socketMeta.get(socket.id) || null;
 }
 
+// playerIdから現在接続中のsocketIdを探す（オンライン判定・通知の送信先特定に使う）
+function findSocketIdByPlayerId(playerId) {
+  for (const [socketId, session] of sessions) {
+    if (session.playerId === playerId) return socketId;
+  }
+  return null;
+}
+
 io.on('connection', (socket) => {
 
   // ── createRoom ──
@@ -638,6 +649,115 @@ io.on('connection', (socket) => {
     } catch (err) {
       console.error('deleteAccount error:', err);
       socket.emit('settingsError', { field: 'delete', message: 'サーバーエラーが発生しました' });
+    }
+  });
+
+  // ── getFriends ──
+  socket.on('getFriends', async () => {
+    const session = sessions.get(socket.id);
+    if (!session) return socket.emit('friendsError', { message: 'ログインが必要です' });
+    try {
+      const [friends, pending] = await Promise.all([
+        getFriendsList(session.playerId),
+        getPendingRequests(session.playerId),
+      ]);
+      socket.emit('friendsList', {
+        friends: friends.map(f => ({
+          playerId: f.player_id, username: f.username, avatar: f.avatar,
+          online: !!findSocketIdByPlayerId(f.player_id),
+        })),
+        pending: pending.map(p => ({ playerId: p.player_id, username: p.username, avatar: p.avatar })),
+      });
+    } catch (err) {
+      console.error('getFriends error:', err);
+      socket.emit('friendsError', { message: 'サーバーエラーが発生しました' });
+    }
+  });
+
+  // ── sendFriendRequest ──
+  socket.on('sendFriendRequest', async ({ username } = {}) => {
+    const session = sessions.get(socket.id);
+    if (!session) return socket.emit('friendsError', { message: 'ログインが必要です' });
+    const target = username?.trim();
+    if (!target) return socket.emit('friendsError', { message: 'ユーザー名を入力してください' });
+    try {
+      const result = await sendFriendRequest(session.playerId, target);
+      socket.emit('friendRequestSent', { autoAccepted: result.autoAccepted, username: result.friendUsername });
+      const targetSocketId = findSocketIdByPlayerId(result.friendPlayerId);
+      if (targetSocketId) {
+        if (result.autoAccepted) {
+          io.to(targetSocketId).emit('friendRequestAccepted', { playerId: session.playerId, username: session.username });
+        } else {
+          io.to(targetSocketId).emit('friendRequestReceived', { playerId: session.playerId, username: session.username });
+        }
+      }
+    } catch (err) {
+      const messages = {
+        USER_NOT_FOUND: 'そのユーザー名は見つかりません',
+        SELF: '自分自身をフレンドに追加することはできません',
+        ALREADY_FRIENDS: '既にフレンドです',
+        ALREADY_REQUESTED: '既にリクエストを送信済みです',
+      };
+      socket.emit('friendsError', { message: messages[err.message] || 'サーバーエラーが発生しました' });
+    }
+  });
+
+  // ── respondFriendRequest ──
+  socket.on('respondFriendRequest', async ({ requesterId, accept } = {}) => {
+    const session = sessions.get(socket.id);
+    if (!session) return socket.emit('friendsError', { message: 'ログインが必要です' });
+    if (!requesterId) return;
+    try {
+      const ok = await respondToFriendRequest(session.playerId, requesterId, !!accept);
+      if (ok && accept) {
+        const requesterSocketId = findSocketIdByPlayerId(requesterId);
+        if (requesterSocketId) {
+          io.to(requesterSocketId).emit('friendRequestAccepted', { playerId: session.playerId, username: session.username });
+        }
+      }
+      socket.emit('friendRequestResponded', { requesterId, accepted: !!accept });
+    } catch (err) {
+      console.error('respondFriendRequest error:', err);
+      socket.emit('friendsError', { message: 'サーバーエラーが発生しました' });
+    }
+  });
+
+  // ── removeFriend ──
+  socket.on('removeFriend', async ({ friendId } = {}) => {
+    const session = sessions.get(socket.id);
+    if (!session) return socket.emit('friendsError', { message: 'ログインが必要です' });
+    if (!friendId) return;
+    try {
+      await removeFriendship(session.playerId, friendId);
+      socket.emit('friendRemoved', { friendId });
+    } catch (err) {
+      console.error('removeFriend error:', err);
+      socket.emit('friendsError', { message: 'サーバーエラーが発生しました' });
+    }
+  });
+
+  // ── inviteFriendToRoom ──
+  socket.on('inviteFriendToRoom', async ({ friendId } = {}) => {
+    const session = sessions.get(socket.id);
+    if (!session) return socket.emit('friendsError', { message: 'ログインが必要です' });
+    const room = getRoom(socket);
+    if (!room) return socket.emit('friendsError', { message: '部屋に参加していません' });
+    if (room.status !== 'waiting') return socket.emit('friendsError', { message: 'ゲーム中は招待できません' });
+    if (!friendId) return;
+    try {
+      const friends = await getFriendsList(session.playerId);
+      if (!friends.some(f => f.player_id === friendId)) {
+        return socket.emit('friendsError', { message: 'フレンドではないユーザーには送れません' });
+      }
+      const targetSocketId = findSocketIdByPlayerId(friendId);
+      if (!targetSocketId) {
+        return socket.emit('friendsError', { message: 'そのフレンドは現在オフラインです' });
+      }
+      io.to(targetSocketId).emit('roomInvite', { roomCode: room.code, fromPlayerId: session.playerId, fromUsername: session.username });
+      socket.emit('friendInviteSent', { friendId });
+    } catch (err) {
+      console.error('inviteFriendToRoom error:', err);
+      socket.emit('friendsError', { message: 'サーバーエラーが発生しました' });
     }
   });
 
