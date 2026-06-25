@@ -84,6 +84,7 @@ const els = {
   roundHands: $('round-hands-table'),
   nextCountdown: $('next-round-countdown'),
   gameWinner: $('game-winner-name'),
+  finalScoresChart: $('final-scores-chart'),
   finalScores: $('final-scores-table'),
   btnBackLobby: $('btn-back-to-lobby'),
   // Lobby screen
@@ -1192,6 +1193,28 @@ function showGameResult(winnerId, totalScores) {
   const players = gameState?.players || [];
   const sorted = [...players].sort((a, b) => (totalScores[b.playerId] || 0) - (totalScores[a.playerId] || 0));
   const medals = ['🥇', '🥈', '🥉', ''];
+
+  const maxScore = Math.max(1, ...sorted.map(p => totalScores[p.playerId] || 0));
+  els.finalScoresChart.innerHTML = sorted.map(p => {
+    const score = totalScores[p.playerId] || 0;
+    const isW = p.playerId === winnerId;
+    const name = p.playerId === myPlayerId ? 'あなた' : p.nickname;
+    return `
+      <div class="chart-row">
+        <span class="chart-row-name">${escHtml(name)}</span>
+        <div class="chart-bar-track">
+          <div class="chart-bar-fill ${isW ? 'winner-bar' : ''}" data-target-width="${(score / maxScore) * 100}">
+            <span class="chart-bar-score">${score}pt</span>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+  // 次フレームでバーを伸ばすアニメーション
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    els.finalScoresChart.querySelectorAll('.chart-bar-fill').forEach(el => {
+      el.style.width = `${el.dataset.targetWidth}%`;
+    });
+  }));
 
   els.finalScores.innerHTML = sorted.map((p, i) => `
     <div class="score-row ${p.playerId === winnerId ? 'winner-row' : ''}">
