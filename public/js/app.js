@@ -86,6 +86,7 @@ const els = {
   gameWinner: $('game-winner-name'),
   finalScoresChart: $('final-scores-chart'),
   finalScores: $('final-scores-table'),
+  roundScoresChart: $('round-scores-chart'),
   btnBackLobby: $('btn-back-to-lobby'),
   // Lobby screen
   btnLobbyBack: $('btn-lobby-back'),
@@ -1132,6 +1133,35 @@ function updateColorIndicator(color) {
   els.colorIndicator.className = `color-indicator ${color || ''}`;
 }
 
+// ── Score Bar Chart (ラウンド結果・最終結果で共通利用) ─────────────────────────
+function renderScoreChart(container, totalScores) {
+  const players = gameState?.players || [];
+  const sorted = [...players].sort((a, b) => (totalScores[b.playerId] || 0) - (totalScores[a.playerId] || 0));
+  const maxScore = Math.max(1, ...sorted.map(p => totalScores[p.playerId] || 0));
+  const leaderId = sorted[0]?.playerId;
+
+  container.innerHTML = sorted.map(p => {
+    const score = totalScores[p.playerId] || 0;
+    const isLeader = p.playerId === leaderId;
+    const name = p.playerId === myPlayerId ? 'あなた' : p.nickname;
+    return `
+      <div class="chart-row">
+        <span class="chart-row-name">${escHtml(name)}</span>
+        <div class="chart-bar-track">
+          <div class="chart-bar-fill ${isLeader ? 'winner-bar' : ''}" data-target-width="${(score / maxScore) * 100}">
+            <span class="chart-bar-score">${score}pt</span>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    container.querySelectorAll('.chart-bar-fill').forEach(el => {
+      el.style.width = `${el.dataset.targetWidth}%`;
+    });
+  }));
+}
+
 // ── Round Result Screen ───────────────────────────────────────────────────────
 function showRoundResult(winnerId, roundScores, totalScores, hands) {
   clearCountdown();
@@ -1139,6 +1169,8 @@ function showRoundResult(winnerId, roundScores, totalScores, hands) {
 
   const winner = findPlayer(winnerId);
   els.roundWinner.textContent = winnerId === myPlayerId ? 'あなた' : (winner?.nickname || '?');
+
+  renderScoreChart(els.roundScoresChart, totalScores);
 
   // Scores table
   const players = gameState?.players || [];
@@ -1194,27 +1226,7 @@ function showGameResult(winnerId, totalScores) {
   const sorted = [...players].sort((a, b) => (totalScores[b.playerId] || 0) - (totalScores[a.playerId] || 0));
   const medals = ['🥇', '🥈', '🥉', ''];
 
-  const maxScore = Math.max(1, ...sorted.map(p => totalScores[p.playerId] || 0));
-  els.finalScoresChart.innerHTML = sorted.map(p => {
-    const score = totalScores[p.playerId] || 0;
-    const isW = p.playerId === winnerId;
-    const name = p.playerId === myPlayerId ? 'あなた' : p.nickname;
-    return `
-      <div class="chart-row">
-        <span class="chart-row-name">${escHtml(name)}</span>
-        <div class="chart-bar-track">
-          <div class="chart-bar-fill ${isW ? 'winner-bar' : ''}" data-target-width="${(score / maxScore) * 100}">
-            <span class="chart-bar-score">${score}pt</span>
-          </div>
-        </div>
-      </div>`;
-  }).join('');
-  // 次フレームでバーを伸ばすアニメーション
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    els.finalScoresChart.querySelectorAll('.chart-bar-fill').forEach(el => {
-      el.style.width = `${el.dataset.targetWidth}%`;
-    });
-  }));
+  renderScoreChart(els.finalScoresChart, totalScores);
 
   els.finalScores.innerHTML = sorted.map((p, i) => `
     <div class="score-row ${p.playerId === winnerId ? 'winner-row' : ''}">
